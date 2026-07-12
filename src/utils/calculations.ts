@@ -203,7 +203,7 @@ export function computeMonth(
   const benefitsRows = benefitConcepts.map((b) => {
     let deducciones = b.devengos;
     if (b.id === 'seguro_medico') {
-      deducciones = (b.devengos * employee.pctDeducibleSeguroMedico) / 100;
+      deducciones = -((b.devengos * employee.pctDeducibleSeguroMedico) / 100);
     }
     return {
       id: b.id,
@@ -214,7 +214,7 @@ export function computeMonth(
   });
 
   const benefitsTotalDevengos = benefitsRows.reduce((acc, r) => acc + r.devengos, 0);
-  const benefitsTotalDeducciones = benefitsRows.reduce((acc, r) => acc + r.deducciones, 0);
+  const benefitsTotalDeducciones = benefitsRows.reduce((acc, r) => acc + Math.abs(r.deducciones), 0);
 
   // 3. Prorrata Extras
   // Only use Sueldo Base, Antiguedad, PLUS Convenio, PLUS Voluntario, Pacto no competencia, Dedicación plena

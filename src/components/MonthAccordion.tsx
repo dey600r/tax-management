@@ -471,42 +471,32 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
                                         {r.base.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </td>
                                       <td className="p-2.5 text-right font-mono text-slate-700">
-                                        <button
-                                          type="button"
-                                          onClick={() => onTriggerEditCell({
-                                            monthId: mId,
-                                            type: 'tax_empl',
-                                            rowId: r.id,
-                                            field: 'pctEmpleado',
-                                            label: `Porcentaje Empleado (${r.name})`,
-                                            val: r.pctEmpleado
-                                          })}
-                                          className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
-                                        >
-                                          <span>{r.pctEmpleado.toFixed(2)}%</span>
-                                          <Edit2 className="w-3 h-3 text-slate-400" />
-                                        </button>
+                                        {isIrpf ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => onTriggerEditCell({
+                                              monthId: mId,
+                                              type: 'tax_empl',
+                                              rowId: r.id,
+                                              field: 'pctEmpleado',
+                                              label: `Porcentaje Empleado (${r.name})`,
+                                              val: r.pctEmpleado
+                                            })}
+                                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                                          >
+                                            <span>{r.pctEmpleado.toFixed(2)}%</span>
+                                            <Edit2 className="w-3 h-3 text-slate-400" />
+                                          </button>
+                                        ) : (
+                                          <span className="text-slate-600 font-medium">{r.pctEmpleado.toFixed(2)}%</span>
+                                        )}
                                       </td>
                                       <td className="p-2.5 text-right font-mono font-semibold text-slate-800">
                                         {r.deduccionEmpleado.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </td>
                                       <td className="p-2.5 text-right font-mono text-slate-700">
                                         {!isIrpf ? (
-                                          <button
-                                            type="button"
-                                            onClick={() => onTriggerEditCell({
-                                              monthId: mId,
-                                              type: 'tax_comp',
-                                              rowId: r.id,
-                                              field: 'pctEmpresa',
-                                              label: `Porcentaje Empresa (${r.name})`,
-                                              val: r.pctEmpresa
-                                            })}
-                                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
-                                          >
-                                            <span>{r.pctEmpresa.toFixed(2)}%</span>
-                                            <Edit2 className="w-3 h-3 text-slate-400" />
-                                          </button>
+                                          <span className="text-slate-600 font-medium">{r.pctEmpresa.toFixed(2)}%</span>
                                         ) : (
                                           <span className="text-slate-400 font-mono">—</span>
                                         )}
