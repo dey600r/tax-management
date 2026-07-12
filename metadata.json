@@ -1,0 +1,6 @@
+{
+  "name": "Gestor de Nóminas e IRPF",
+  "description": "Aplicación offline-first para gestionar nóminas mensuales, calcular el impacto del IRPF anual y realizar simulaciones fiscales en España.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
