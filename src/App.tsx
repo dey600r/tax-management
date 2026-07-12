@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppState, ActiveView, MonthId, EmployeeData, YearState } from './types';
+import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
 import { YearTabs } from './components/YearTabs';
@@ -7,7 +7,7 @@ import { MonthAccordion } from './components/MonthAccordion';
 import { AnnualSummaryView } from './components/AnnualSummaryView';
 import { FloatingEditPanel } from './components/FloatingEditPanel';
 import { DashboardView, DashboardYearSummary } from './components/DashboardView';
-import { createDefaultYearState, computeYear } from './utils/calculations';
+import { createDefaultYearState, computeYear, MONTH_LABELS } from './utils/calculations';
 
 const LOCAL_STORAGE_KEY = 'gestor_nominas_state_v1';
 
@@ -190,6 +190,18 @@ export default function App() {
       ...data,
     };
     updateActiveYearState(yrState);
+  };
+
+  const handleCopyMonthData = (fromMonthId: MonthId, toMonthId: MonthId) => {
+    const yrState = { ...activeState };
+    // Deep clone the source month state
+    const sourceMonth = JSON.parse(JSON.stringify(yrState.months[fromMonthId])) as MonthState;
+    
+    // Assign the cloned state to the target month
+    yrState.months[toMonthId] = sourceMonth;
+    
+    updateActiveYearState(yrState);
+    showToast(`Datos copiados de ${MONTH_LABELS[fromMonthId]} a ${MONTH_LABELS[toMonthId]}`, 'success');
   };
 
   // Add Dynamic Salary Concept
@@ -491,6 +503,7 @@ export default function App() {
               onDeleteSalaryConcept={handleDeleteSalaryConcept}
               onAddBenefitConcept={handleAddBenefitConcept}
               onDeleteBenefitConcept={handleDeleteBenefitConcept}
+              onCopyMonthData={handleCopyMonthData}
               onTriggerEditCell={(params) => setEditingCell(params)}
             />
 

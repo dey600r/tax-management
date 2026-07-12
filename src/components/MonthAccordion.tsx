@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, User, Plus, Trash2, Edit2, ShieldAlert } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, Plus, Trash2, Edit2, ShieldAlert, Copy } from 'lucide-react';
 import { MonthId, EmployeeData, MonthState } from '../types';
 import { ComputedMonthResult, ComputedMonthAccumulatorRow, MONTHS_ORDER, MONTH_LABELS } from '../utils/calculations';
 import { PartitionsChart } from './PartitionsChart';
@@ -13,6 +13,7 @@ interface MonthAccordionProps {
   onDeleteSalaryConcept: (monthId: MonthId, id: string) => void;
   onAddBenefitConcept: (monthId: MonthId) => void;
   onDeleteBenefitConcept: (monthId: MonthId, id: string) => void;
+  onCopyMonthData: (fromMonthId: MonthId, toMonthId: MonthId) => void;
   onTriggerEditCell: (params: {
     monthId: MonthId;
     type: 'salary' | 'benefit' | 'tax_empl' | 'tax_comp';
@@ -33,9 +34,12 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
   onDeleteSalaryConcept,
   onAddBenefitConcept,
   onDeleteBenefitConcept,
+  onCopyMonthData,
   onTriggerEditCell,
 }) => {
   const [expandedMonth, setExpandedMonth] = useState<MonthId | null>('enero');
+  const [activeCopyTarget, setActiveCopyTarget] = useState<MonthId | null>(null);
+  const [sourceMonthSelect, setSourceMonthSelect] = useState<MonthId>('enero');
 
   const toggleMonth = (mId: MonthId) => {
     setExpandedMonth(expandedMonth === mId ? null : mId);
@@ -85,6 +89,27 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
                 <span className="sm:hidden text-xs font-mono font-bold text-slate-700">
                   {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                 </span>
+                
+                {/* Copiar datos button in header */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const currentIdx = MONTHS_ORDER.indexOf(mId);
+                    const defaultSource = currentIdx > 0 ? MONTHS_ORDER[currentIdx - 1] : 'enero';
+                    setSourceMonthSelect(defaultSource);
+                    setActiveCopyTarget(mId);
+                    if (!isExpanded) {
+                      toggleMonth(mId);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                  title="Copiar datos desde otro mes"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Copiar</span>
+                </button>
+
                 {isExpanded ? (
                   <ChevronUp className="w-5 h-5 text-blue-600" />
                 ) : (
@@ -96,6 +121,71 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
             {/* Accordion Body */}
             {isExpanded && (
               <div className="p-4 sm:p-6 bg-white border-t border-slate-100 space-y-6 animate-slide-down">
+                
+                {/* Copy Month Data Panel */}
+                {activeCopyTarget === mId ? (
+                  <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in" id={`copy-panel-active-${mId}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                        <Copy className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-bold text-slate-800">
+                          Copiar datos a {MONTH_LABELS[mId]}
+                        </span>
+                        <span className="block text-xs text-slate-500">
+                          Selecciona el mes o paga extra de origen para importar todos los datos a este mes.
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                      <select
+                        value={sourceMonthSelect}
+                        onChange={(e) => setSourceMonthSelect(e.target.value as MonthId)}
+                        className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-48 cursor-pointer"
+                      >
+                        {MONTHS_ORDER.map((otherId) => (
+                          <option key={otherId} value={otherId} disabled={otherId === mId}>
+                            {MONTH_LABELS[otherId]} {otherId === mId ? '(Mes actual)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <button
+                        onClick={() => {
+                          onCopyMonthData(sourceMonthSelect, mId);
+                          setActiveCopyTarget(null);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        Confirmar Copia
+                      </button>
+                      
+                      <button
+                        onClick={() => setActiveCopyTarget(null)}
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-end -mb-3" id={`copy-panel-inactive-${mId}`}>
+                    <button
+                      onClick={() => {
+                        const currentIdx = MONTHS_ORDER.indexOf(mId);
+                        const defaultSource = currentIdx > 0 ? MONTHS_ORDER[currentIdx - 1] : 'enero';
+                        setSourceMonthSelect(defaultSource);
+                        setActiveCopyTarget(mId);
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer border border-blue-100 bg-white"
+                    >
+                      <Copy className="w-3.5 h-3.5" /> Copiar datos de otro mes...
+                    </button>
+                  </div>
+                )}
+
                 {/* 1. Datos Empleado Card */}
                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/60" id={`card-empleado-${mId}`}>
                   <h4 className="font-sans font-extrabold text-slate-800 text-[10px] uppercase tracking-widest mb-3 flex items-center gap-1.5">
