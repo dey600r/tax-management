@@ -259,7 +259,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
               {/* Card C: IRPF AUTONOMICO Config */}
               <div className="border border-slate-200/80 rounded-xl p-4 bg-slate-50/50 space-y-3 xl:col-span-2">
                 <h4 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider">
-                  Tramos e Impuestos - IRPF AUTONÓMICO (Comunidad Autónoma Valenciana por defecto)
+                  Tramos e Impuestos - IRPF AUTONÓMICO
                 </h4>
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
                   <table className="w-full text-left border-collapse text-xs">
@@ -438,137 +438,183 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                   </button>
                 </div>
                 
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1 text-xxs">
-                  {/* System Row 1: Mínimo Personal */}
-                  <div className="flex items-center justify-between gap-2 p-1.5 bg-white border border-slate-100 rounded shadow-2xs">
-                    <span className="font-semibold text-slate-600 leading-tight">Mínimo Personal</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minimoPersonalEstatal', field: 'minimoPersonalEstatal', label: 'Mínimo Estatal', val: taxExemptions.minimoPersonalEstatal })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>E:{taxExemptions.minimoPersonalEstatal}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minimoPersonalAutonomico', field: 'minimoPersonalAutonomico', label: 'Mínimo Autonómico', val: taxExemptions.minimoPersonalAutonomico })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>A:{taxExemptions.minimoPersonalAutonomico}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                    </div>
-                  </div>
+                <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+                        <th className="p-2.5">Concepto</th>
+                        <th className="p-2.5 text-right">Estatal (€)</th>
+                        <th className="p-2.5 text-right">Autonómico (€)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* System Row 1: Mínimo Personal */}
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 font-semibold text-slate-600">Mínimo Personal</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minimoPersonalEstatal', field: 'minimoPersonalEstatal', label: 'Mínimo Estatal', val: taxExemptions.minimoPersonalEstatal })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.minimoPersonalEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minimoPersonalAutonomico', field: 'minimoPersonalAutonomico', label: 'Mínimo Autonómico', val: taxExemptions.minimoPersonalAutonomico })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.minimoPersonalAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                      </tr>
 
-                  {/* System Row 2: Descendientes */}
-                  <div className="flex items-center justify-between gap-2 p-1.5 bg-white border border-slate-100 rounded shadow-2xs">
-                    <span className="font-semibold text-slate-600 leading-tight">Descendientes</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'descendientesEstatal', field: 'descendientesEstatal', label: 'Descendientes Estatal', val: taxExemptions.descendientesEstatal })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>E:{taxExemptions.descendientesEstatal}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'descendientesAutonomico', field: 'descendientesAutonomico', label: 'Descendientes Autonómico', val: taxExemptions.descendientesAutonomico })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>A:{taxExemptions.descendientesAutonomico}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                    </div>
-                  </div>
+                      {/* System Row 2: Descendientes */}
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 font-semibold text-slate-600">Descendientes</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'descendientesEstatal', field: 'descendientesEstatal', label: 'Descendientes Estatal', val: taxExemptions.descendientesEstatal })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.descendientesEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'descendientesAutonomico', field: 'descendientesAutonomico', label: 'Descendientes Autonómico', val: taxExemptions.descendientesAutonomico })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.descendientesAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                      </tr>
 
-                  {/* System Row 3: Ascendientes */}
-                  <div className="flex items-center justify-between gap-2 p-1.5 bg-white border border-slate-100 rounded shadow-2xs">
-                    <span className="font-semibold text-slate-600 leading-tight">Ascendientes</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'ascendientesEstatal', field: 'ascendientesEstatal', label: 'Ascendientes Estatal', val: taxExemptions.ascendientesEstatal })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>E:{taxExemptions.ascendientesEstatal}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'ascendientesAutonomico', field: 'ascendientesAutonomico', label: 'Ascendientes Autonómico', val: taxExemptions.ascendientesAutonomico })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>A:{taxExemptions.ascendientesAutonomico}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                    </div>
-                  </div>
+                      {/* System Row 3: Ascendientes */}
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 font-semibold text-slate-600">Ascendientes</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'ascendientesEstatal', field: 'ascendientesEstatal', label: 'Ascendientes Estatal', val: taxExemptions.ascendientesEstatal })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.ascendientesEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'ascendientesAutonomico', field: 'ascendientesAutonomico', label: 'Ascendientes Autonómico', val: taxExemptions.ascendientesAutonomico })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.ascendientesAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                      </tr>
 
-                  {/* System Row 4: Minusvalías */}
-                  <div className="flex items-center justify-between gap-2 p-1.5 bg-white border border-slate-100 rounded shadow-2xs">
-                    <span className="font-semibold text-slate-600 leading-tight">Minusvalías</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minusvaliasEstatal', field: 'minusvaliasEstatal', label: 'Minusvalías Estatal', val: taxExemptions.minusvaliasEstatal })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>E:{taxExemptions.minusvaliasEstatal}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minusvaliasAutonomico', field: 'minusvaliasAutonomico', label: 'Minusvalías Autonómico', val: taxExemptions.minusvaliasAutonomico })}
-                        className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                      >
-                        <span>A:{taxExemptions.minusvaliasAutonomico}</span>
-                        <Edit2 className="w-2.5 h-2.5 text-slate-400" />
-                      </button>
-                    </div>
-                  </div>
+                      {/* System Row 4: Minusvalías */}
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 font-semibold text-slate-600">Minusvalías</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minusvaliasEstatal', field: 'minusvaliasEstatal', label: 'Minusvalías Estatal', val: taxExemptions.minusvaliasEstatal })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.minusvaliasEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">
+                          <button
+                            type="button"
+                            onClick={() => onTriggerEditCell({ type: 'exemption', rowId: 'minusvaliasAutonomico', field: 'minusvaliasAutonomico', label: 'Minusvalías Autonómico', val: taxExemptions.minusvaliasAutonomico })}
+                            className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                          >
+                            <span>{taxExemptions.minusvaliasAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                          </button>
+                        </td>
+                      </tr>
 
-                  {/* Dynamic user added exemptions */}
-                  {taxExemptions.dynamicExemptions.map((dyn) => (
-                    <div key={dyn.id} className="flex items-center justify-between gap-2 p-1.5 bg-white border border-blue-100 rounded shadow-2xs group relative">
-                      <button
-                        type="button"
-                        onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'name', label: 'Nombre desgravación', val: dyn.name, isText: true })}
-                        className="font-semibold text-slate-600 flex items-center gap-1 text-left focus:outline-none"
-                      >
-                        <span className="underline decoration-dotted decoration-slate-400 leading-tight">{dyn.name}</span>
-                        <Edit2 className="w-2 h-2 text-slate-400 opacity-0 group-hover:opacity-100" />
-                      </button>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'estatal', label: `Estatal (${dyn.name})`, val: dyn.estatal })}
-                          className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                        >
-                          <span>E:{dyn.estatal}</span>
-                          <Edit2 className="w-2 h-2 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'autonomico', label: `Autonómico (${dyn.name})`, val: dyn.autonomico })}
-                          className="font-mono font-medium text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer focus:outline-none"
-                        >
-                          <span>A:{dyn.autonomico}</span>
-                          <Edit2 className="w-2 h-2 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteDynamicExemption(dyn.id)}
-                          className="text-slate-400 hover:text-red-500 focus:outline-none opacity-0 group-hover:opacity-100 ml-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-white p-2 border border-slate-100 rounded-lg text-xxs space-y-1 font-bold">
-                  <div className="flex justify-between text-slate-500 border-b border-slate-50 pb-1">
-                    <span>TOTAL EXENTOS</span>
-                    <span>Estatal: {annualSummary.exenciones.totalEstatal.toLocaleString('es-ES')} € | Autonómico: {annualSummary.exenciones.totalAutonomico.toLocaleString('es-ES')} €</span>
-                  </div>
-                  <div className="flex justify-between text-blue-600 pt-0.5">
-                    <span>IMPUESTOS EXENTOS (Ahorro)</span>
-                    <span>Est: {annualSummary.exenciones.impuestosEstatal.toFixed(2)} € | Aut: {annualSummary.exenciones.impuestosAutonomico.toFixed(2)} €</span>
-                  </div>
+                      {/* Dynamic user added exemptions */}
+                      {taxExemptions.dynamicExemptions.map((dyn) => (
+                        <tr key={dyn.id} className="border-b border-slate-100 hover:bg-slate-50/50 group">
+                          <td className="p-2.5 text-slate-600 font-medium">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'name', label: 'Nombre desgravación', val: dyn.name, isText: true })}
+                                className="font-semibold text-slate-600 flex items-center gap-1 text-left focus:outline-none hover:text-blue-600"
+                              >
+                                <span className="underline decoration-dotted decoration-slate-400 leading-tight">{dyn.name}</span>
+                                <Edit2 className="w-2.5 h-2.5 text-slate-400 opacity-0 group-hover:opacity-100" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDeleteDynamicExemption(dyn.id)}
+                                className="text-slate-400 hover:text-red-500 focus:outline-none opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="p-2.5 text-right font-mono text-slate-700">
+                            <button
+                              type="button"
+                              onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'estatal', label: `Estatal (${dyn.name})`, val: dyn.estatal })}
+                              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                            >
+                              <span>{dyn.estatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <Edit2 className="w-3 h-3 text-slate-400" />
+                            </button>
+                          </td>
+                          <td className="p-2.5 text-right font-mono text-slate-700">
+                            <button
+                              type="button"
+                              onClick={() => onTriggerEditCell({ type: 'exemption_dynamic', rowId: dyn.id, field: 'autonomico', label: `Autonómico (${dyn.name})`, val: dyn.autonomico })}
+                              className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700 border-b border-dashed border-blue-500/30 cursor-pointer focus:outline-none"
+                            >
+                              <span>{dyn.autonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <Edit2 className="w-3 h-3 text-slate-400" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
+                        <td className="p-2.5">TOTAL EXENTOS</td>
+                        <td className="p-2.5 text-right font-mono">
+                          {annualSummary.exenciones.totalEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        </td>
+                        <td className="p-2.5 text-right font-mono">
+                          {annualSummary.exenciones.totalAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        </td>
+                      </tr>
+                      <tr className="bg-blue-50/50 font-bold border-t border-slate-200 text-blue-800">
+                        <td className="p-2.5">IMPUESTOS EXENTOS (Ahorro)</td>
+                        <td className="p-2.5 text-right font-mono">
+                          {annualSummary.exenciones.impuestosEstatal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        </td>
+                        <td className="p-2.5 text-right font-mono">
+                          {annualSummary.exenciones.impuestosAutonomico.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
 
@@ -643,45 +689,45 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                   4. Detalle de Retención IRPF Cuotas Líquidas Necesarias
                 </h4>
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
-                  <table className="w-full text-left border-collapse text-xxs">
+                  <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold font-sans">
-                        <th className="p-2">Concepto</th>
-                        <th className="p-2 text-right">Estatal €</th>
-                        <th className="p-2 text-right">Estatal %</th>
-                        <th className="p-2 text-right">Autonómico €</th>
-                        <th className="p-2 text-right">Autonómico %</th>
-                        <th className="p-2 text-right">Total €</th>
-                        <th className="p-2 text-right">Total %</th>
+                        <th className="p-2.5">Concepto</th>
+                        <th className="p-2.5 text-right">Estatal €</th>
+                        <th className="p-2.5 text-right">Estatal %</th>
+                        <th className="p-2.5 text-right">Autonómico €</th>
+                        <th className="p-2.5 text-right">Autonómico %</th>
+                        <th className="p-2.5 text-right">Total €</th>
+                        <th className="p-2.5 text-right">Total %</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-slate-100">
-                        <td className="p-2 text-slate-600 font-medium">Retención IRPF</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.estatalEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.estatalPct.toFixed(1)}%</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.autonomicoEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.autonomicoPct.toFixed(1)}%</td>
-                        <td className="p-2 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">Retención IRPF</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.irpfNecesario.estatalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.irpfNecesario.estatalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.irpfNecesario.autonomicoEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.irpfNecesario.autonomicoPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
                       </tr>
-                      <tr className="border-b border-slate-100 text-slate-400">
-                        <td className="p-2">Retención Capital</td>
-                        <td className="p-2 text-right font-mono">0.00</td>
-                        <td className="p-2 text-right font-mono">0.0%</td>
-                        <td className="p-2 text-right font-mono">0.00</td>
-                        <td className="p-2 text-right font-mono">0.0%</td>
-                        <td className="p-2 text-right font-mono">0.00</td>
-                        <td className="p-2 text-right font-mono">0.0%</td>
+                      <tr className="border-b border-slate-100 text-slate-400 hover:bg-slate-50/50">
+                        <td className="p-2.5">Retención Capital</td>
+                        <td className="p-2.5 text-right font-mono">0.00</td>
+                        <td className="p-2.5 text-right font-mono">0.0%</td>
+                        <td className="p-2.5 text-right font-mono">0.00</td>
+                        <td className="p-2.5 text-right font-mono">0.0%</td>
+                        <td className="p-2.5 text-right font-mono">0.00</td>
+                        <td className="p-2.5 text-right font-mono">0.0%</td>
                       </tr>
                       <tr className="font-bold text-slate-800 bg-slate-50/50">
-                        <td className="p-2 font-sans uppercase">CUOTAS LIQUIDAS</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.estatalEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.estatalPct.toFixed(1)}%</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.autonomicoEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.irpfNecesario.autonomicoPct.toFixed(1)}%</td>
-                        <td className="p-2 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
-                        <td className="p-2 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 font-sans uppercase">CUOTAS LIQUIDAS</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.estatalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.estatalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.autonomicoEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.autonomicoPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
                       </tr>
                     </tbody>
                   </table>
@@ -721,74 +767,74 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
 
               {/* Card 5: BORRADOR RENTA (Detailed outcome table) */}
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3 shadow-2xs" id="card-borrador-renta-anual">
-                <h4 className="font-sans font-extrabold text-slate-800 text-[10px] uppercase tracking-widest border-b border-slate-200 pb-2 flex items-center gap-1.5">
+                <h4 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-blue-600" />
                   5. BORRADOR RENTA Y CONCILIACIÓN FINAL
                 </h4>
                 <div className="overflow-x-auto border border-slate-200 rounded-lg bg-white">
-                  <table className="w-full text-left border-collapse text-xxs">
+                  <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold font-sans">
-                        <th className="p-2">Concepto</th>
-                        <th className="p-2 text-right">PAGADO (€)</th>
-                        <th className="p-2 text-right">PAGADO (%)</th>
-                        <th className="p-2 text-right">SALDO BORRADOR (€)</th>
+                        <th className="p-2.5">Concepto</th>
+                        <th className="p-2.5 text-right">PAGADO (€)</th>
+                        <th className="p-2.5 text-right">PAGADO (%)</th>
+                        <th className="p-2.5 text-right">SALDO BORRADOR (€)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {/* Row 1: Retención IRPF */}
-                      <tr className="border-b border-slate-100">
-                        <td className="p-2 text-slate-600 font-medium">Retención IRPF</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.retencionIrpf.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.retencionIrpf.pagadoPct.toFixed(1)}%</td>
-                        <td className={`p-2 text-right font-mono font-bold ${annualSummary.borradorRenta.retencionIrpf.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">Retención IRPF</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.retencionIrpf.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.retencionIrpf.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-bold ${annualSummary.borradorRenta.retencionIrpf.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {annualSummary.borradorRenta.retencionIrpf.borradorEuro > 0 ? '+' : ''}
                           {annualSummary.borradorRenta.retencionIrpf.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                       {/* Row 2: Retención Capital */}
-                      <tr className="border-b border-slate-100 text-slate-400">
-                        <td className="p-2">Retención Capital</td>
-                        <td className="p-2 text-right font-mono">0.00</td>
-                        <td className="p-2 text-right font-mono">0.0%</td>
-                        <td className="p-2 text-right font-mono">0.00</td>
+                      <tr className="border-b border-slate-100 text-slate-400 hover:bg-slate-50/50">
+                        <td className="p-2.5">Retención Capital</td>
+                        <td className="p-2.5 text-right font-mono">0.00</td>
+                        <td className="p-2.5 text-right font-mono">0.0%</td>
+                        <td className="p-2.5 text-right font-mono text-slate-400">0.00</td>
                       </tr>
                       {/* Row 3: CUOTAS LIQUIDAS */}
-                      <tr className="border-b border-slate-200 font-semibold text-slate-800 bg-slate-50/20">
-                        <td className="p-2 uppercase font-sans">CUOTAS LIQUIDAS</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.cuotasLiquidas.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.cuotasLiquidas.pagadoPct.toFixed(1)}%</td>
-                        <td className={`p-2 text-right font-mono font-bold ${annualSummary.borradorRenta.cuotasLiquidas.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      <tr className="border-b border-slate-200 font-semibold text-slate-800 bg-slate-50/20 hover:bg-slate-50/50">
+                        <td className="p-2.5 uppercase font-sans">CUOTAS LIQUIDAS</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.cuotasLiquidas.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.cuotasLiquidas.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-bold ${annualSummary.borradorRenta.cuotasLiquidas.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {annualSummary.borradorRenta.cuotasLiquidas.borradorEuro > 0 ? '+' : ''}
                           {annualSummary.borradorRenta.cuotasLiquidas.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                       {/* Row 4: SS Empleado */}
-                      <tr className="border-b border-slate-100">
-                        <td className="p-2 text-slate-600 font-medium">SS Empleado</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.ssEmpleado.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.ssEmpleado.pagadoPct.toFixed(1)}%</td>
-                        <td className={`p-2 text-right font-mono font-bold ${annualSummary.borradorRenta.ssEmpleado.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">SS Empleado</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.ssEmpleado.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.ssEmpleado.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-bold ${annualSummary.borradorRenta.ssEmpleado.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {annualSummary.borradorRenta.ssEmpleado.borradorEuro > 0 ? '+' : ''}
                           {annualSummary.borradorRenta.ssEmpleado.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                       {/* Row 5: SS Empresa */}
-                      <tr className="border-b border-slate-100">
-                        <td className="p-2 text-slate-600 font-medium">SS Empresa</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.ssEmpresa.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.ssEmpresa.pagadoPct.toFixed(1)}%</td>
-                        <td className={`p-2 text-right font-mono font-bold ${annualSummary.borradorRenta.ssEmpresa.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">SS Empresa</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.ssEmpresa.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.ssEmpresa.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-bold ${annualSummary.borradorRenta.ssEmpresa.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {annualSummary.borradorRenta.ssEmpresa.borradorEuro > 0 ? '+' : ''}
                           {annualSummary.borradorRenta.ssEmpresa.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                       {/* Row 6: TOTAL */}
                       <tr className="font-extrabold text-slate-900 bg-slate-100 font-sans">
-                        <td className="p-2 uppercase">TOTAL ACUMULADO</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.total.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
-                        <td className="p-2 text-right font-mono">{annualSummary.borradorRenta.total.pagadoPct.toFixed(1)}%</td>
-                        <td className={`p-2 text-right font-mono font-extrabold ${annualSummary.borradorRenta.total.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                        <td className="p-2.5 uppercase">TOTAL ACUMULADO</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.borradorRenta.total.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.borradorRenta.total.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-extrabold ${annualSummary.borradorRenta.total.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {annualSummary.borradorRenta.total.borradorEuro > 0 ? '+' : ''}
                           {annualSummary.borradorRenta.total.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
                         </td>
@@ -799,7 +845,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
               </div>
 
               {/* Card 6: Resultados Gráfico (Pie Chart of results) */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3 xl:col-span-2 shadow-2xs" id="card-resultados-grafico-anual">
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3 lg:col-span-2 shadow-2xs" id="card-resultados-grafico-anual">
                 <h4 className="font-sans font-bold text-slate-800 text-xs uppercase tracking-wider border-b border-slate-200 pb-2">
                   Distribución Gráfica del Gasto Anual Pagado (IRPF + SS + Neto Recibido)
                 </h4>
