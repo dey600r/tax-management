@@ -171,7 +171,8 @@ export interface ComputedMonthResult {
 export function computeMonth(
   monthId: MonthId,
   state: MonthState,
-  ssConfig: SocialSecurityConfigRow[]
+  ssConfig: SocialSecurityConfigRow[],
+  allPreviousComputed?: Record<MonthId, ComputedMonthResult>
 ): ComputedMonthResult {
   const { employee, salaryConcepts, benefitConcepts, taxOverrides } = state;
   const numDias = employee.numDias <= 0 ? 0 : employee.numDias;
@@ -195,6 +196,31 @@ export function computeMonth(
       devengos,
     };
   });
+
+  if (monthId === 'extra1' || monthId === 'extra2') {
+    let sumProrrata = 0;
+    if (allPreviousComputed) {
+      const prevMonths = monthId === 'extra1'
+        ? ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio']
+        : ['julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+      
+      prevMonths.forEach((m) => {
+        const key = m as MonthId;
+        if (allPreviousComputed[key]) {
+          sumProrrata += allPreviousComputed[key].prorrataExtras;
+        }
+      });
+    }
+    const precioHoraCalculado = numDias > 0 ? sumProrrata / numDias : 0;
+    const devengosCalculado = sumProrrata;
+    
+    salaryBaseRows.push({
+      id: 'precio_hora_extra',
+      name: 'PRECIO / HORA',
+      precioHora: precioHoraCalculado,
+      devengos: devengosCalculado,
+    });
+  }
 
   const salaryBaseTotalPrecioHora = salaryBaseRows.reduce((acc, r) => acc + r.precioHora, 0);
   const salaryBaseTotalDevengos = salaryBaseRows.reduce((acc, r) => acc + r.devengos, 0);
@@ -230,7 +256,8 @@ export function computeMonth(
   
   // Base SS formula: (TOTAL Salario Base + TOTAL Beneficios) - Seguro Medico + Prorrata Extras
   const rawBaseSS = (salaryBaseTotalDevengos + benefitsTotalDevengos) - seguroMedicoDevengos + prorrataExtras;
-  const baseSS = rawBaseSS < 0 ? 0 : rawBaseSS;
+  const isExtra = monthId === 'extra1' || monthId === 'extra2';
+  const baseSS = isExtra ? 0 : (rawBaseSS < 0 ? 0 : rawBaseSS);
 
   // Base IRPF formula: TOTAL Salario Base + Seguro Medico devengos
   const baseIRPF = salaryBaseTotalDevengos + seguroMedicoDevengos;
@@ -378,7 +405,7 @@ export function computeYear(yearState: YearState): ComputedYearResult {
 
   // Compute individual months first
   MONTHS_ORDER.forEach((mId) => {
-    monthsComputed[mId] = computeMonth(mId, yearState.months[mId], yearState.socialSecurityConfig);
+    monthsComputed[mId] = computeMonth(mId, yearState.months[mId], yearState.socialSecurityConfig, monthsComputed);
   });
 
   // Calculate chronological accumulators

@@ -66,9 +66,9 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
             }`}
           >
             {/* Accordion Header */}
-            <button
+            <div
               onClick={() => toggleMonth(mId)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 text-left font-sans select-none focus:outline-none cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3.5 text-left font-sans select-none cursor-pointer ${
                 isExpanded ? 'bg-slate-50' : 'bg-white'
               }`}
             >
@@ -116,7 +116,7 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
                   <ChevronDown className="w-5 h-5 text-slate-400" />
                 )}
               </div>
-            </button>
+            </div>
 
             {/* Accordion Body */}
             {isExpanded && (
@@ -350,8 +350,8 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
                                 {mComp.salaryBaseRows.map((r) => {
                                   // Determine if the concept belongs to the default system rows or custom rows
                                   const configRow = mState.salaryConcepts.find((c) => c.id === r.id);
-                                  const isSystem = configRow?.isSystem ?? true;
-                                  const isEditable = configRow?.isEditable ?? true;
+                                  const isSystem = r.id === 'precio_hora_extra' ? true : (configRow?.isSystem ?? true);
+                                  const isEditable = r.id === 'precio_hora_extra' ? false : (configRow?.isEditable ?? true);
 
                                   return (
                                     <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/50">
