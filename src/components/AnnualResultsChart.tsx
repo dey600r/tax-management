@@ -6,6 +6,7 @@ interface AnnualResultsChartProps {
   ssEmpleadoPagado: number;
   ssEmpresaPagado: number;
   totalPagado: number;
+  retencionCapitalPagado?: number;
 }
 
 export const AnnualResultsChart: React.FC<AnnualResultsChartProps> = ({
@@ -14,8 +15,18 @@ export const AnnualResultsChart: React.FC<AnnualResultsChartProps> = ({
   ssEmpleadoPagado,
   ssEmpresaPagado,
   totalPagado,
+  retencionCapitalPagado = 0,
 }) => {
-  const baseGrafico = salarioBruto + ssEmpleadoPagado + ssEmpresaPagado;
+  const vIrpf = Math.max(0, retencionIrpfPagado);
+  const vSsEmp = Math.max(0, ssEmpleadoPagado);
+  const vSsCom = Math.max(0, ssEmpresaPagado);
+  const vCapital = Math.max(0, retencionCapitalPagado);
+
+  // RESTO = Salario Bruto - Retención IRPF - SS Empleado - Retención Capital
+  const rawResto = salarioBruto - vIrpf - vSsEmp - vCapital;
+  const vResto = rawResto < 0 ? 0 : rawResto;
+
+  const baseGrafico = salarioBruto + vSsCom;
 
   if (baseGrafico <= 0) {
     return (
@@ -30,16 +41,7 @@ export const AnnualResultsChart: React.FC<AnnualResultsChartProps> = ({
     );
   }
 
-  // Calculate RESTO
-  // RESTO = (Salario Bruto + SS Empleado + SS Empresa) - TOTAL (fila 6, Col2 de Borrador Renta)
-  const rawResto = baseGrafico - totalPagado;
-  const vResto = rawResto < 0 ? 0 : rawResto;
-
-  const vIrpf = Math.max(0, retencionIrpfPagado);
-  const vSsEmp = Math.max(0, ssEmpleadoPagado);
-  const vSsCom = Math.max(0, ssEmpresaPagado);
-
-  const sumSegments = vIrpf + vSsEmp + vSsCom + vResto;
+  const sumSegments = vIrpf + vSsEmp + vSsCom + vCapital + vResto;
   if (sumSegments <= 0) {
     return (
       <div className="flex items-center justify-center h-48 text-slate-400 text-xs font-mono">
@@ -48,11 +50,12 @@ export const AnnualResultsChart: React.FC<AnnualResultsChartProps> = ({
     );
   }
 
-  // Percentages relative to BaseGrafico
-  const pctIrpf = (vIrpf / baseGrafico) * 100;
-  const pctSsEmp = (vSsEmp / baseGrafico) * 100;
-  const pctSsCom = (vSsCom / baseGrafico) * 100;
-  const pctResto = (vResto / baseGrafico) * 100;
+  // Percentages relative to sumSegments
+  const pctIrpf = (vIrpf / sumSegments) * 100;
+  const pctSsEmp = (vSsEmp / sumSegments) * 100;
+  const pctSsCom = (vSsCom / sumSegments) * 100;
+  const pctCapital = (vCapital / sumSegments) * 100;
+  const pctResto = (vResto / sumSegments) * 100;
 
   // State for hover interactive tooltip
   const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
@@ -66,6 +69,7 @@ export const AnnualResultsChart: React.FC<AnnualResultsChartProps> = ({
     { label: 'Retención IRPF', value: vIrpf, pct: pctIrpf, color: '#f43f5e' }, // rose-500
     { label: 'SS Empleado', value: vSsEmp, pct: pctSsEmp, color: '#f59e0b' }, // amber-500
     { label: 'SS Empresa', value: vSsCom, pct: pctSsCom, color: '#475569' }, // slate-600
+    ...(vCapital > 0 ? [{ label: 'Retención Capital', value: vCapital, pct: pctCapital, color: '#8b5cf6' }] : []), // violet-500
   ];
 
   let accumulatedPercentage = 0;

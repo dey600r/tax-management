@@ -508,14 +508,14 @@ export function computeYear(yearState: YearState): ComputedYearResult {
 
   // 4. IRPF Necesario
   // Calculate progressive brackets tax
-  const taxEstatalFromBrackets = calculateProgressiveTax(baseIrpfTotal, yearState.irpfStateBrackets);
-  const taxRegionalFromBrackets = calculateProgressiveTax(baseIrpfTotal, yearState.irpfRegionalBrackets);
+  const taxEstatalFromBrackets = calculateProgressiveTax(baseIrpfPagado, yearState.irpfStateBrackets);
+  const taxRegionalFromBrackets = calculateProgressiveTax(baseIrpfPagado, yearState.irpfRegionalBrackets);
 
   const estatalEuro = Math.max(0, taxEstatalFromBrackets - exemptionTaxesEstatal);
-  const estatalPct = baseIrpfTotal > 0 ? (estatalEuro / baseIrpfTotal) * 100 : 0;
+  const estatalPct = baseIrpfPagado > 0 ? (estatalEuro / baseIrpfPagado) * 100 : 0;
 
   const autonomicoEuro = Math.max(0, taxRegionalFromBrackets - exemptionTaxesAutonomico);
-  const autonomicoPct = baseIrpfTotal > 0 ? (autonomicoEuro / baseIrpfTotal) * 100 : 0;
+  const autonomicoPct = baseIrpfPagado > 0 ? (autonomicoEuro / baseIrpfPagado) * 100 : 0;
 
   const irpfNecesarioTotalEuro = estatalEuro + autonomicoEuro;
   const irpfNecesarioTotalPct = estatalPct + autonomicoPct;

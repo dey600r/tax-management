@@ -44,7 +44,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
 
   // Calculate bracket tax contributions for representation
   const stateBracketTaxes = irpfStateBrackets.map((b) => {
-    const base = annualSummary.baseCotizacion.baseIrpfTotal;
+    const base = annualSummary.baseCotizacion.baseIrpfPagado;
     const inicio = b.inicio;
     const fin = b.fin;
     const pct = b.pct;
@@ -54,7 +54,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
   });
 
   const regionalBracketTaxes = irpfRegionalBrackets.map((b) => {
-    const base = annualSummary.baseCotizacion.baseIrpfTotal;
+    const base = annualSummary.baseCotizacion.baseIrpfPagado;
     const inicio = b.inicio;
     const fin = b.fin;
     const pct = b.pct;
@@ -855,6 +855,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                   ssEmpleadoPagado={annualSummary.borradorRenta.ssEmpleado.pagadoEuro}
                   ssEmpresaPagado={annualSummary.borradorRenta.ssEmpresa.pagadoEuro}
                   totalPagado={annualSummary.borradorRenta.total.pagadoEuro}
+                  retencionCapitalPagado={annualSummary.borradorRenta.retencionCapital.pagadoEuro}
                 />
               </div>
 

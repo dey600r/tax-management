@@ -79,36 +79,11 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
                 <span className="hidden sm:inline-block text-xxs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
                   Neto: {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                 </span>
-                {employee.nombre && (
-                  <span className="hidden md:inline-block text-xs font-medium text-slate-500">
-                    — {employee.nombre}
-                  </span>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="sm:hidden text-xs font-mono font-bold text-slate-700">
                   {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                 </span>
-                
-                {/* Copiar datos button in header */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIdx = MONTHS_ORDER.indexOf(mId);
-                    const defaultSource = currentIdx > 0 ? MONTHS_ORDER[currentIdx - 1] : 'enero';
-                    setSourceMonthSelect(defaultSource);
-                    setActiveCopyTarget(mId);
-                    if (!isExpanded) {
-                      toggleMonth(mId);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                  title="Copiar datos desde otro mes"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Copiar</span>
-                </button>
 
                 {isExpanded ? (
                   <ChevronUp className="w-5 h-5 text-blue-600" />
