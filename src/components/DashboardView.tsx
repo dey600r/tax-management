@@ -90,7 +90,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
   const totalHistoricallySS = summaries.reduce((acc, curr) => acc + curr.ssEmpleado + curr.ssEmpresa, 0);
 
   return (
-    <div className="space-y-6" id="dashboard-view-wrapper">
+    <div className="space-y-3.5" id="dashboard-view-wrapper">
       
       {/* 1. Quick Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-stats-row">
@@ -156,8 +156,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
       </div>
 
       {/* 2. Combo Chart Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm relative" id="card-dashboard-chart">
-        <div className="mb-6 space-y-1">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm relative" id="card-dashboard-chart">
+        <div className="mb-2.5 space-y-1">
           <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
             <Award className="w-4 h-4 text-emerald-500" />
             Evolución de Poder Adquisitivo e Impuestos
@@ -300,7 +300,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
         </div>
 
         {/* Custom Legend underneath */}
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 mt-4 border-t border-slate-100 pt-4 text-xs" id="dashboard-chart-legend">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-2 border-t border-slate-100 pt-2 text-xs" id="dashboard-chart-legend">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-xs shrink-0" style={{ backgroundColor: colors.neto }} />
             <span className="font-sans font-semibold text-emerald-600">Salario Neto (Poder Adquisitivo)</span>
