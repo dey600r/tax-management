@@ -388,6 +388,22 @@ export interface ComputedYearResult {
       totalEuro: number;
       totalPct: number;
       difference: number;
+      retencionCapital: {
+        estatalEuro: number;
+        estatalPct: number;
+        autonomicoEuro: number;
+        autonomicoPct: number;
+        totalEuro: number;
+        totalPct: number;
+      };
+      cuotasLiquidas: {
+        estatalEuro: number;
+        estatalPct: number;
+        autonomicoEuro: number;
+        autonomicoPct: number;
+        totalEuro: number;
+        totalPct: number;
+      };
     };
     borradorRenta: {
       retencionIrpf: { pagadoEuro: number; pagadoPct: number; borradorEuro: number };
@@ -506,7 +522,7 @@ export function computeYear(yearState: YearState): ComputedYearResult {
   const baseIrpfTotal = totalIngresos - totalBaseColTotal;
   const baseIrpfPagado = totalIngresos - totalBaseColPagado;
 
-  // 4. IRPF Necesario
+  // 4. IRPF Necesario & Savings Base Integration
   // Calculate progressive brackets tax
   const taxEstatalFromBrackets = calculateProgressiveTax(baseIrpfPagado, yearState.irpfStateBrackets);
   const taxRegionalFromBrackets = calculateProgressiveTax(baseIrpfPagado, yearState.irpfRegionalBrackets);
@@ -520,7 +536,38 @@ export function computeYear(yearState: YearState): ComputedYearResult {
   const irpfNecesarioTotalEuro = estatalEuro + autonomicoEuro;
   const irpfNecesarioTotalPct = estatalPct + autonomicoPct;
   const actualIrpfRetainedInMonths = lastAccum.retencionesIrpf;
-  const irpfNecesarioDifference = irpfNecesarioTotalEuro - actualIrpfRetainedInMonths;
+
+  // Inversiones & Savings Base (Ahorro)
+  const inversiones = yearState.inversiones || [];
+  const totalInteresBruto = inversiones.reduce((sum, r) => sum + (r.interesBruto || 0), 0);
+  const totalImpuestosExtranjero = inversiones.reduce((sum, r) => sum + (r.impuestosExtranjero || 0), 0);
+  const totalComisionesDeducibles = inversiones.reduce((sum, r) => sum + (r.comisionDeducible ? (r.comisiones || 0) : 0), 0);
+  const totalImpuestosEspana = inversiones.reduce((sum, r) => sum + (r.impuestosEspana || 0), 0);
+
+  const totalGastosDeducibles = totalInteresBruto - totalComisionesDeducibles;
+  const impuestosResumen = (totalGastosDeducibles * 0.19) - totalImpuestosExtranjero;
+
+  // Fila 2: Retención Capital Formulas (split 50/50 Estatal and Autonómico)
+  const retencionCapitalEstatalEuro = impuestosResumen / 2;
+  const retencionCapitalEstatalPct = totalInteresBruto === 0 ? 0 : 9.5; // (0.19 / 2) * 100
+
+  const retencionCapitalAutonomicoEuro = impuestosResumen / 2;
+  const retencionCapitalAutonomicoPct = totalInteresBruto === 0 ? 0 : 9.5; // (0.19 / 2) * 100
+
+  const retencionCapitalTotalEuro = retencionCapitalEstatalEuro + retencionCapitalAutonomicoEuro;
+  const retencionCapitalTotalPct = retencionCapitalEstatalPct + retencionCapitalAutonomicoPct;
+
+  // Fila 3: CUOTAS LIQUIDAS (IRPF + Capital combined)
+  const clEstatalEuro = estatalEuro + retencionCapitalEstatalEuro;
+  const clEstatalPct = estatalPct + retencionCapitalEstatalPct;
+  const clAutonomicoEuro = autonomicoEuro + retencionCapitalAutonomicoEuro;
+  const clAutonomicoPct = autonomicoPct + retencionCapitalAutonomicoPct;
+  const clTotalEuro = irpfNecesarioTotalEuro + retencionCapitalTotalEuro;
+  const clTotalPct = irpfNecesarioTotalPct + retencionCapitalTotalPct;
+
+  // Difference: Cuotas Líquidas Total - Total Paid in advance (IRPF retained + Capital paid in Spain)
+  const totalPaidInAdvance = actualIrpfRetainedInMonths + totalImpuestosEspana;
+  const irpfNecesarioDifference = clTotalEuro - totalPaidInAdvance;
 
   // 5. Borrador Renta Table (results-calculations)
   // Row 1: Retención IRPF
@@ -529,9 +576,9 @@ export function computeYear(yearState: YearState): ComputedYearResult {
   const bRetencionIrpfBorradorEuro = irpfNecesarioTotalEuro - bRetencionIrpfPagadoEuro;
 
   // Row 2: Retención Capital
-  const bRetencionCapitalPagadoEuro = 0;
-  const bRetencionCapitalPagadoPct = 0;
-  const bRetencionCapitalBorradorEuro = 0;
+  const bRetencionCapitalPagadoEuro = totalImpuestosEspana;
+  const bRetencionCapitalPagadoPct = totalIngresos > 0 ? (bRetencionCapitalPagadoEuro / totalIngresos) * 100 : 0;
+  const bRetencionCapitalBorradorEuro = impuestosResumen - bRetencionCapitalPagadoEuro;
 
   // Row 3: CUOTAS LIQUIDAS
   const bCuotasLiquidasPagadoEuro = bRetencionIrpfPagadoEuro + bRetencionCapitalPagadoEuro;
@@ -587,6 +634,22 @@ export function computeYear(yearState: YearState): ComputedYearResult {
         totalEuro: irpfNecesarioTotalEuro,
         totalPct: irpfNecesarioTotalPct,
         difference: irpfNecesarioDifference,
+        retencionCapital: {
+          estatalEuro: retencionCapitalEstatalEuro,
+          estatalPct: retencionCapitalEstatalPct,
+          autonomicoEuro: retencionCapitalAutonomicoEuro,
+          autonomicoPct: retencionCapitalAutonomicoPct,
+          totalEuro: retencionCapitalTotalEuro,
+          totalPct: retencionCapitalTotalPct,
+        },
+        cuotasLiquidas: {
+          estatalEuro: clEstatalEuro,
+          estatalPct: clEstatalPct,
+          autonomicoEuro: clAutonomicoEuro,
+          autonomicoPct: clAutonomicoPct,
+          totalEuro: clTotalEuro,
+          totalPct: clTotalPct,
+        },
       },
       borradorRenta: {
         retencionIrpf: {

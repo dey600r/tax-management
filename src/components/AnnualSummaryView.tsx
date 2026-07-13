@@ -720,23 +720,23 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                         <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
                         <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
                       </tr>
-                      <tr className="border-b border-slate-100 text-slate-400 hover:bg-slate-50/50">
-                        <td className="p-2.5">Retención Capital</td>
-                        <td className="p-2.5 text-right font-mono">0.00</td>
-                        <td className="p-2.5 text-right font-mono">0.0%</td>
-                        <td className="p-2.5 text-right font-mono">0.00</td>
-                        <td className="p-2.5 text-right font-mono">0.0%</td>
-                        <td className="p-2.5 text-right font-mono">0.00</td>
-                        <td className="p-2.5 text-right font-mono">0.0%</td>
+                      <tr className="border-b border-slate-100 text-slate-500 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">Retención Capital</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.retencionCapital.estatalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.retencionCapital.estatalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.retencionCapital.autonomicoEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.retencionCapital.autonomicoPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.retencionCapital.totalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono font-bold text-slate-800">{annualSummary.irpfNecesario.retencionCapital.totalPct.toFixed(1)}%</td>
                       </tr>
                       <tr className="font-bold text-slate-800 bg-slate-50/50">
                         <td className="p-2.5 font-sans uppercase">CUOTAS LIQUIDAS</td>
-                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.estatalEuro.toFixed(2)}</td>
-                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.estatalPct.toFixed(1)}%</td>
-                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.autonomicoEuro.toFixed(2)}</td>
-                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.autonomicoPct.toFixed(1)}%</td>
-                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalEuro.toFixed(2)}</td>
-                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.totalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.cuotasLiquidas.estatalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.cuotasLiquidas.estatalPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.cuotasLiquidas.autonomicoEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono">{annualSummary.irpfNecesario.cuotasLiquidas.autonomicoPct.toFixed(1)}%</td>
+                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.cuotasLiquidas.totalEuro.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-900 font-extrabold">{annualSummary.irpfNecesario.cuotasLiquidas.totalPct.toFixed(1)}%</td>
                       </tr>
                     </tbody>
                   </table>
@@ -746,10 +746,10 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                 <div className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-4">
                   <div>
                     <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wide">
-                      Retenciones ya pagadas en nóminas mensuales:
+                      Retenciones ya pagadas en nóminas y capital:
                     </span>
                     <span className="text-xs font-mono font-bold text-slate-700">
-                      {annualSummary.borradorRenta.retencionIrpf.pagadoEuro.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                      {annualSummary.borradorRenta.cuotasLiquidas.pagadoEuro.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                     </span>
                   </div>
                   <div className="text-right">
@@ -802,11 +802,14 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
                         </td>
                       </tr>
                       {/* Row 2: Retención Capital */}
-                      <tr className="border-b border-slate-100 text-slate-400 hover:bg-slate-50/50">
-                        <td className="p-2.5">Retención Capital</td>
-                        <td className="p-2.5 text-right font-mono">0.00</td>
-                        <td className="p-2.5 text-right font-mono">0.0%</td>
-                        <td className="p-2.5 text-right font-mono text-slate-400">0.00</td>
+                      <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 text-slate-600 font-medium">Retención Capital</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.retencionCapital.pagadoEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}</td>
+                        <td className="p-2.5 text-right font-mono text-slate-700">{annualSummary.borradorRenta.retencionCapital.pagadoPct.toFixed(1)}%</td>
+                        <td className={`p-2.5 text-right font-mono font-bold ${annualSummary.borradorRenta.retencionCapital.borradorEuro > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                          {annualSummary.borradorRenta.retencionCapital.borradorEuro > 0 ? '+' : ''}
+                          {annualSummary.borradorRenta.retencionCapital.borradorEuro.toLocaleString('es-ES', { minimumFractionDigits: 2 })}
+                        </td>
                       </tr>
                       {/* Row 3: CUOTAS LIQUIDAS */}
                       <tr className="border-b border-slate-200 font-semibold text-slate-800 bg-slate-50/20 hover:bg-slate-50/50">
