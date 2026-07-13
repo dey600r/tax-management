@@ -40,7 +40,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
   onUpdateInversiones,
 }) => {
   const [configExpanded, setConfigExpanded] = useState<boolean>(false);
-  const [rentaExpanded, setRentaExpanded] = useState<boolean>(true);
+  const [rentaExpanded, setRentaExpanded] = useState<boolean>(false);
 
   const { socialSecurityConfig, irpfStateBrackets, irpfRegionalBrackets, taxExemptions } = yearState;
   const { annualSummary } = computedYear;
@@ -81,7 +81,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
           <div className="flex items-center gap-2.5">
             <Settings className="w-5 h-5 text-blue-400" />
             <span className="font-sans font-bold text-sm uppercase tracking-wider">
-              CONFIGURACIÓN RENTA (Porcentajes e Impuestos)
+              CONFIGURACIÓN RENTA
             </span>
           </div>
           {configExpanded ? (
@@ -374,19 +374,34 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
         <button
           onClick={() => setRentaExpanded(!rentaExpanded)}
-          className="w-full flex items-center justify-between px-5 py-4 bg-slate-900 text-white select-none focus:outline-none cursor-pointer"
+          className="w-full flex items-center justify-between px-5 py-4 bg-slate-900 text-white select-none focus:outline-none cursor-pointer gap-4"
         >
-          <div className="flex items-center gap-2.5">
-            <BarChart3 className="w-5 h-5 text-blue-400" />
-            <span className="font-sans font-bold text-sm uppercase tracking-wider">
-              DECLARACIÓN ANUAL DE LA RENTA (Consolidados y Borrador)
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BarChart3 className="w-5 h-5 text-blue-400 shrink-0" />
+            <span className="font-sans font-bold text-sm uppercase tracking-wider truncate">
+              DECLARACIÓN ANUAL DE LA RENTA
             </span>
           </div>
-          {rentaExpanded ? (
-            <ChevronUp className="w-5 h-5 text-blue-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
-          )}
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className={`flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold font-mono ${
+              annualSummary.irpfNecesario.difference > 0
+                ? 'bg-rose-950/60 text-rose-300 border border-rose-800/60'
+                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/60'
+            }`}>
+              <span>Resultado:</span>
+              <span>
+                {annualSummary.irpfNecesario.difference > 0 ? '+' : ''}
+                {annualSummary.irpfNecesario.difference.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+              </span>
+            </div>
+
+            {rentaExpanded ? (
+              <ChevronUp className="w-5 h-5 text-blue-400 shrink-0" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
+            )}
+          </div>
         </button>
 
         {rentaExpanded && (

@@ -11,7 +11,7 @@ export const SavingsBaseSection: React.FC<SavingsBaseSectionProps> = ({
   inversiones = [],
   onUpdateInversiones,
 }) => {
-  const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   // Add new dynamic row
   const handleAddRow = () => {

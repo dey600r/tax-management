@@ -37,7 +37,7 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
   onCopyMonthData,
   onTriggerEditCell,
 }) => {
-  const [expandedMonth, setExpandedMonth] = useState<MonthId | null>('enero');
+  const [expandedMonth, setExpandedMonth] = useState<MonthId | null>(null);
   const [activeCopyTarget, setActiveCopyTarget] = useState<MonthId | null>(null);
   const [sourceMonthSelect, setSourceMonthSelect] = useState<MonthId>('enero');
 
@@ -68,27 +68,24 @@ export const MonthAccordion: React.FC<MonthAccordionProps> = ({
             {/* Accordion Header */}
             <div
               onClick={() => toggleMonth(mId)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 text-left font-sans select-none cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3.5 text-left font-sans select-none cursor-pointer gap-4 ${
                 isExpanded ? 'bg-slate-50' : 'bg-white'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className={`text-base font-bold transition-colors ${isExpanded ? 'text-blue-600' : 'text-slate-800'}`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`text-base font-bold transition-colors truncate ${isExpanded ? 'text-blue-600' : 'text-slate-800'}`}>
                   {MONTH_LABELS[mId]}
                 </span>
-                <span className="hidden sm:inline-block text-xxs font-mono bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                  Neto: {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="sm:hidden text-xs font-mono font-bold text-slate-700">
-                  {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className="text-xxs sm:text-xs font-mono bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-bold">
+                  Neto: {mComp.neto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                 </span>
 
                 {isExpanded ? (
-                  <ChevronUp className="w-5 h-5 text-blue-600" />
+                  <ChevronUp className="w-5 h-5 text-blue-600 shrink-0" />
                 ) : (
-                  <ChevronDown className="w-5 h-5 text-slate-400" />
+                  <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
                 )}
               </div>
             </div>
