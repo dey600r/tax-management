@@ -84,6 +84,18 @@ export interface SocialSecurityConfigRow {
   pctEmpresa: number;
 }
 
+export interface InvestmentRow {
+  id: string;
+  banco: string;
+  venta: number;
+  compra: number;
+  interesBruto: number;
+  impuestosEspana: number;
+  impuestosExtranjero: number;
+  comisiones: number;
+  comisionDeducible: boolean;
+}
+
 export interface YearState {
   year: number;
   months: Record<MonthId, MonthState>;
@@ -93,6 +105,7 @@ export interface YearState {
   otrosBeneficios: number;
   rendimientoTrabajo: number;
   taxExemptions: TaxExemptions;
+  inversiones?: InvestmentRow[];
 }
 
 export interface AppState {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState } from './types';
+import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
 import { YearTabs } from './components/YearTabs';
@@ -189,6 +189,12 @@ export default function App() {
       ...yrState.months[monthId].employee,
       ...data,
     };
+    updateActiveYearState(yrState);
+  };
+
+  const handleUpdateInversiones = (inversiones: InvestmentRow[]) => {
+    const yrState = { ...activeState };
+    yrState.inversiones = inversiones;
     updateActiveYearState(yrState);
   };
 
@@ -524,6 +530,7 @@ export default function App() {
                 onDeleteDynamicExemption={handleDeleteDynamicExemption}
                 onUpdateDynamicExemption={() => {}}
                 onTriggerEditCell={(params) => setEditingCell(params)}
+                onUpdateInversiones={handleUpdateInversiones}
               />
             </div>
           </div>

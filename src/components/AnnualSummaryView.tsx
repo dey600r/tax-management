@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Settings, BarChart3, Plus, Trash2, Edit2, TrendingUp, Sparkles } from 'lucide-react';
-import { YearState, SocialSecurityConfigRow, TaxBracket, TaxExemptions } from '../types';
+import { YearState, SocialSecurityConfigRow, TaxBracket, TaxExemptions, InvestmentRow } from '../types';
 import { ComputedYearResult } from '../utils/calculations';
 import { AnnualResultsChart } from './AnnualResultsChart';
+import { SavingsBaseSection } from './SavingsBaseSection';
 
 interface AnnualSummaryViewProps {
   yearState: YearState;
@@ -27,6 +28,7 @@ interface AnnualSummaryViewProps {
     isText?: boolean;
     bracketIdx?: number;
   }) => void;
+  onUpdateInversiones: (inversiones: InvestmentRow[]) => void;
 }
 
 export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
@@ -35,6 +37,7 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
   onAddDynamicExemption,
   onDeleteDynamicExemption,
   onTriggerEditCell,
+  onUpdateInversiones,
 }) => {
   const [configExpanded, setConfigExpanded] = useState<boolean>(false);
   const [rentaExpanded, setRentaExpanded] = useState<boolean>(true);
@@ -360,6 +363,12 @@ export const AnnualSummaryView: React.FC<AnnualSummaryViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* BASE DEL AHORRO E INVERSIONES */}
+      <SavingsBaseSection
+        inversiones={yearState.inversiones || []}
+        onUpdateInversiones={onUpdateInversiones}
+      />
 
       {/* 2. COLLAPSIBLE: RENTA */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs">
