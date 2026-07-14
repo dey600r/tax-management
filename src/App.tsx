@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow } from './types';
+import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow, ExpenseRow } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
 import { YearTabs } from './components/YearTabs';
@@ -202,6 +202,12 @@ export default function App() {
   const handleUpdateTransfers = (transfers: Record<string, TransferRow[]>) => {
     const yrState = { ...activeState };
     yrState.transfers = transfers;
+    updateActiveYearState(yrState);
+  };
+
+  const handleUpdateExpenses = (expenses: Record<string, ExpenseRow[]>) => {
+    const yrState = { ...activeState };
+    yrState.expenses = expenses;
     updateActiveYearState(yrState);
   };
 
@@ -510,6 +516,7 @@ export default function App() {
               yearState={activeState}
               computedYear={computedYear}
               onUpdateTransfers={handleUpdateTransfers}
+              onUpdateExpenses={handleUpdateExpenses}
               showToast={showToast}
             />
           </div>

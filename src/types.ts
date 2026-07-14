@@ -105,6 +105,15 @@ export interface TransferRow {
   importe: number;
 }
 
+export interface ExpenseRow {
+  id: string;
+  cuentaOrigen: string;
+  tipo: 'Gasto Fijo' | 'Gasto Estimado' | 'Inversion Fija' | 'Inversion estimada' | 'Ahorro';
+  clasificacion: 'Vivienda' | 'Alimentacion' | 'Ocio' | 'Trabajo' | 'Vehiculos' | 'Inversion' | 'Regalos' | 'Ahorro' | 'Ropa';
+  importe: number;
+  capReaccion: number | null; // range 0-100, can be null
+}
+
 export interface YearState {
   year: number;
   months: Record<MonthId, MonthState>;
@@ -116,6 +125,7 @@ export interface YearState {
   taxExemptions: TaxExemptions;
   inversiones?: InvestmentRow[];
   transfers?: Record<string, TransferRow[]>; // key is monthId
+  expenses?: Record<string, ExpenseRow[]>; // key is monthId
 }
 
 export interface AppState {
