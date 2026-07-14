@@ -67,6 +67,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   showToast,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<MonthId>('enero');
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   // Active month data
   const monthTransfers = yearState.transfers?.[selectedMonth] || [];
@@ -117,6 +119,17 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   }
   
   const summaryTotalRestoEuros = netoNomina - summaryTotalSumaEuros;
+
+  const handleMouseMove = (e: React.MouseEvent<SVGCircleElement>, idx: number) => {
+    const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (rect) {
+      setTooltipPos({
+        x: e.clientX - rect.left + 12,
+        y: e.clientY - rect.top - 12,
+      });
+    }
+    setHoveredIdx(idx);
+  };
 
   // Visual status rules for Total % NETO
   let statusColor = 'text-emerald-600 bg-emerald-500/10 border-emerald-200';
@@ -629,93 +642,187 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
             </p>
           </div>
 
-          <div className="h-48 relative flex items-center justify-center mt-2" id="pie-chart-wrapper">
+          <div className="flex-1 flex items-center justify-center mt-2 relative" id="pie-chart-wrapper">
             {summaryTotalSumaEuros <= 0 ? (
-              <div className="text-center p-6 text-slate-400 font-medium text-xs flex flex-col items-center justify-center space-y-2">
+              <div className="text-center p-6 text-slate-400 font-medium text-xs flex flex-col items-center justify-center space-y-2 h-48 w-full">
                 <div className="w-10 h-10 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-slate-400">
                   <PieIcon className="w-5 h-5" />
                 </div>
                 <span>Sin transferencias para graficar en este mes.</span>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={summaryRows
-                      .filter((row) => row.sumaEuros > 0)
-                      .map((row) => ({
-                        name: row.tipo,
-                        value: row.sumaEuros,
-                        pct: row.sumaPct,
-                      }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {summaryRows
-                      .filter((row) => row.sumaEuros > 0)
-                      .map((row, idx) => (
-                        <Cell key={`cell-${idx}`} fill={CATEGORY_COLORS[row.tipo] || '#94a3b8'} />
-                      ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+              <div className="flex flex-col sm:flex-row items-center gap-6 justify-center p-2 relative w-full h-full min-h-[220px]">
+                {/* SVG Donut */}
+                <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
+                    <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
+                    {(() => {
+                      let accumulatedPercentage = 0;
+                      const chartSegments = summaryRows.map((row) => {
+                        const value = Math.max(0, row.sumaEuros);
+                        const pct = summaryTotalSumaEuros > 0 ? (value / summaryTotalSumaEuros) * 100 : 0;
+                        return {
+                          label: row.tipo,
+                          value,
+                          pct,
+                          color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
+                        };
+                      });
 
-          {/* Quick List Legend for Clean Dashboard Vibe */}
-          <div className="space-y-1.5 border-t border-slate-100 pt-3 mt-3" id="chart-legend-list">
-            {summaryRows.map((row) => {
-              const color = CATEGORY_COLORS[row.tipo];
-              return (
-                <div key={row.tipo} className="flex items-center justify-between text-[11px] py-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <span className="font-semibold text-slate-600">{row.tipo}</span>
-                  </div>
-                  <div className="font-mono text-slate-500">
-                    <span className="font-bold text-slate-700">
-                      {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                    </span>
-                    <span className="ml-1.5 font-medium text-slate-400">({row.sumaPct.toFixed(1)}%)</span>
+                      return chartSegments.map((seg, idx) => {
+                        if (seg.value <= 0) return null;
+                        const segmentPercentage = seg.value / summaryTotalSumaEuros;
+                        const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
+                        const strokeDashoffset = -((accumulatedPercentage) * 439.82);
+                        accumulatedPercentage += segmentPercentage;
+
+                        const isHovered = hoveredIdx === idx;
+
+                        return (
+                          <circle
+                            key={idx}
+                            cx="80"
+                            cy="80"
+                            r={70}
+                            fill="transparent"
+                            stroke={seg.color}
+                            strokeWidth={isHovered ? 20 : 16}
+                            strokeDasharray={strokeDasharray}
+                            strokeDashoffset={strokeDashoffset}
+                            strokeLinecap="round"
+                            className="transition-all duration-200 cursor-pointer"
+                            onMouseMove={(e) => handleMouseMove(e, idx)}
+                            onMouseEnter={() => setHoveredIdx(idx)}
+                            onMouseLeave={() => {
+                              setHoveredIdx(null);
+                              setTooltipPos(null);
+                            }}
+                          />
+                        );
+                      });
+                    })()}
+                  </svg>
+
+                  {/* Center label */}
+                  <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
+                    {(() => {
+                      const chartSegments = summaryRows.map((row) => {
+                        const value = Math.max(0, row.sumaEuros);
+                        const pct = summaryTotalSumaEuros > 0 ? (value / summaryTotalSumaEuros) * 100 : 0;
+                        return {
+                          label: row.tipo,
+                          value,
+                          pct,
+                          color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
+                        };
+                      });
+
+                      if (hoveredIdx !== null && chartSegments[hoveredIdx]) {
+                        return (
+                          <>
+                            <span 
+                              className="block text-[9px] font-bold uppercase tracking-wider transition-colors duration-150"
+                              style={{ color: chartSegments[hoveredIdx].color }}
+                            >
+                              {chartSegments[hoveredIdx].label}
+                            </span>
+                            <span className="block text-xs font-bold font-mono text-slate-800 mt-0.5 whitespace-nowrap">
+                              {chartSegments[hoveredIdx].value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                            </span>
+                            <span className="block text-[10px] font-bold text-slate-500 font-mono mt-0.5">
+                              {chartSegments[hoveredIdx].pct.toFixed(1)}%
+                            </span>
+                          </>
+                        );
+                      }
+
+                      return (
+                        <>
+                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                            Total
+                          </span>
+                          <span className="block text-xs font-extrabold font-mono text-slate-800 mt-0.5 whitespace-nowrap">
+                            {summaryTotalSumaEuros.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
-              );
-            })}
+
+                {/* Simplified Compact Legend to the right */}
+                <div className="flex-none flex flex-row sm:flex-col flex-wrap sm:flex-nowrap justify-center gap-x-4 gap-y-2 text-[11px] w-full max-w-xs sm:max-w-[160px]">
+                  {(() => {
+                    const chartSegments = summaryRows.map((row) => {
+                      const value = Math.max(0, row.sumaEuros);
+                      const pct = summaryTotalSumaEuros > 0 ? (value / summaryTotalSumaEuros) * 100 : 0;
+                      return {
+                        label: row.tipo,
+                        value,
+                        pct,
+                        color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
+                      };
+                    });
+
+                    return chartSegments.map((seg, idx) => {
+                      if (seg.value <= 0) return null;
+                      const isHovered = hoveredIdx === idx;
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex items-center gap-2 transition-all duration-150 cursor-pointer ${
+                            hoveredIdx !== null && !isHovered ? 'opacity-40 scale-95' : 'opacity-100 scale-100'
+                          }`}
+                          onMouseEnter={() => setHoveredIdx(idx)}
+                          onMouseLeave={() => setHoveredIdx(null)}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                          <span className={`font-sans font-medium text-slate-600 transition-colors ${isHovered ? 'text-slate-900 font-bold' : ''}`}>
+                            {seg.label}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Floating Tooltip */}
+                {hoveredIdx !== null && tooltipPos && (() => {
+                  const chartSegments = summaryRows.map((row) => {
+                    const value = Math.max(0, row.sumaEuros);
+                    const pct = summaryTotalSumaEuros > 0 ? (value / summaryTotalSumaEuros) * 100 : 0;
+                    return {
+                      label: row.tipo,
+                      value,
+                      pct,
+                      color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
+                    };
+                  });
+
+                  const activeSeg = chartSegments[hoveredIdx];
+                  if (!activeSeg) return null;
+
+                  return (
+                    <div
+                      className="absolute z-10 bg-slate-900/95 text-white text-[11px] font-sans rounded-lg py-1.5 px-2.5 shadow-md pointer-events-none space-y-0.5 border border-slate-800/50 backdrop-blur-xs font-medium"
+                      style={{ left: tooltipPos.x, top: tooltipPos.y }}
+                    >
+                      <div className="font-bold text-slate-300">{activeSeg.label}</div>
+                      <div className="font-mono text-white flex items-center gap-1.5">
+                        <span>{activeSeg.value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                        <span style={{ color: activeSeg.color }} className="font-bold">({activeSeg.pct.toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
 
       </div>
 
-      {/* Helper Legend Panel */}
-      <div className="bg-slate-900 border border-slate-800 text-slate-300 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4" id="savings-legend-panel">
-        <div>
-          <h4 className="font-sans font-bold text-slate-100 text-xs uppercase tracking-wider mb-0.5">
-            Información sobre los tipos de operaciones
-          </h4>
-          <p className="text-[11px] text-slate-400 font-medium">
-            Clasificar correctamente tus transferencias te ayuda a analizar adónde va tu dinero a final de mes.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-semibold text-slate-300">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-rose-500 shrink-0" />
-            <span>Gasto Fijo / Estimado</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-indigo-500 shrink-0" />
-            <span>Inversión Fija / Estimada</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded bg-emerald-500 shrink-0" />
-            <span>Ahorro Directo</span>
-          </div>
-        </div>
-      </div>
+
 
     </div>
   );
