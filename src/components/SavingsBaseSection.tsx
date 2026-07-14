@@ -42,10 +42,16 @@ export const SavingsBaseSection: React.FC<SavingsBaseSectionProps> = ({
     value: string | number | boolean
   ) => {
     const updated = [...inversiones];
-    updated[index] = {
+    const currentRow = {
       ...updated[index],
       [field]: value,
     } as InvestmentRow;
+
+    if (currentRow.venta !== 0 && currentRow.compra !== 0) {
+      currentRow.interesBruto = Math.round((currentRow.venta - currentRow.compra) * 100) / 100;
+    }
+
+    updated[index] = currentRow;
     onUpdateInversiones(updated);
   };
 
@@ -58,11 +64,14 @@ export const SavingsBaseSection: React.FC<SavingsBaseSectionProps> = ({
 
   // Row and footer calculations
   const computedRows = inversiones.map((row) => {
-    const impuestos = row.interesBruto * 0.19;
+    const hasVentaYCompra = row.venta !== 0 && row.compra !== 0;
+    const interesBruto = hasVentaYCompra ? Math.round((row.venta - row.compra) * 100) / 100 : row.interesBruto;
+    const impuestos = interesBruto * 0.19;
     const comisionesNoDeducibles = row.comisionDeducible ? 0 : row.comisiones;
-    const total = row.interesBruto - impuestos - comisionesNoDeducibles;
+    const total = interesBruto - impuestos - comisionesNoDeducibles;
     return {
       ...row,
+      interesBruto,
       impuestos,
       comisionesNoDeducibles,
       total,
@@ -212,10 +221,15 @@ export const SavingsBaseSection: React.FC<SavingsBaseSectionProps> = ({
                           step="any"
                           value={row.interesBruto === 0 ? '' : row.interesBruto}
                           placeholder="0.00"
+                          readOnly={row.venta !== 0 && row.compra !== 0}
                           onChange={(e) =>
                             handleUpdateField(index, 'interesBruto', parseInputValue(e.target.value))
                           }
-                          className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-amber-500 focus:bg-white rounded px-2 py-1 text-slate-800 font-bold font-mono focus:outline-none transition-all text-right"
+                          className={`w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-amber-500 focus:bg-white rounded px-2 py-1 font-mono focus:outline-none transition-all text-right ${
+                            row.venta !== 0 && row.compra !== 0
+                              ? 'bg-slate-50/70 text-slate-500 cursor-not-allowed font-semibold'
+                              : 'text-slate-800 font-bold'
+                          }`}
                         />
                       </td>
 
@@ -311,31 +325,33 @@ export const SavingsBaseSection: React.FC<SavingsBaseSectionProps> = ({
               {computedRows.length > 0 && (
                 <tfoot>
                   <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
-                    <td className="p-3 text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
+                    <td className="py-3 pl-[17px] pr-2 text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
                       Totales
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-3 pl-2 pr-[17px] text-right">
                       {totalVenta.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="py-3 pl-2 pr-[17px] text-right">
                       {totalCompra.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right text-amber-700">
+                    <td className="py-3 pl-2 pr-[17px] text-right text-amber-700">
                       {totalInteresBruto.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right text-slate-600">
+                    <td className="py-3 pl-2 pr-2 text-right text-slate-600">
                       {totalImpuestos.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right text-slate-600">
+                    <td className="py-3 pl-2 pr-[17px] text-right text-slate-600">
                       {totalImpuestosEspana.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right text-slate-600">
+                    <td className="py-3 pl-2 pr-[17px] text-right text-slate-600">
                       {totalImpuestosExtranjero.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="p-3 text-right text-slate-600">
-                      {totalComisiones.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <td className="p-2 py-3">
+                      <div className="ml-[7px] w-20 text-right text-slate-600">
+                        {totalComisiones.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
                     </td>
-                    <td className="p-3 text-right text-slate-900 bg-amber-500/5">
+                    <td className="py-3 pl-2 pr-2 text-right text-slate-900 bg-amber-500/5">
                       {totalGeneral.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td></td>

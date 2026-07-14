@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow } from './types';
+import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
 import { YearTabs } from './components/YearTabs';
@@ -7,6 +7,7 @@ import { MonthAccordion } from './components/MonthAccordion';
 import { AnnualSummaryView } from './components/AnnualSummaryView';
 import { FloatingEditPanel } from './components/FloatingEditPanel';
 import { DashboardView, DashboardYearSummary } from './components/DashboardView';
+import { SavingsExpensesView } from './components/SavingsExpensesView';
 import { createDefaultYearState, computeYear, MONTH_LABELS } from './utils/calculations';
 
 const LOCAL_STORAGE_KEY = 'gestor_nominas_state_v1';
@@ -195,6 +196,12 @@ export default function App() {
   const handleUpdateInversiones = (inversiones: InvestmentRow[]) => {
     const yrState = { ...activeState };
     yrState.inversiones = inversiones;
+    updateActiveYearState(yrState);
+  };
+
+  const handleUpdateTransfers = (transfers: Record<string, TransferRow[]>) => {
+    const yrState = { ...activeState };
+    yrState.transfers = transfers;
     updateActiveYearState(yrState);
   };
 
@@ -473,6 +480,40 @@ export default function App() {
             <DashboardView summaries={dashboardSummaries} />
           </div>
           
+        ) : appState.activeView === 'ahorros-gastos' ? (
+          
+          /* Savings & Expenses View */
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+                  Gestión de Ahorros y Gastos
+                </h2>
+                <p className="text-xs text-slate-400 font-medium">
+                  Controla tus transferencias automáticas mensuales a otras entidades bancarias y planifica tu ahorro y gasto sin superar tu nómina neta.
+                </p>
+              </div>
+            </div>
+
+            {/* Years tabs (shared for seamless sync) */}
+            <YearTabs
+              years={appState.years}
+              activeYear={appState.activeYear}
+              onSelectYear={handleSelectYear}
+              onAddYear={handleAddYear}
+              onDeleteYear={handleDeleteYear}
+              onRenameYear={handleRenameYear}
+              showToast={showToast}
+            />
+
+            <SavingsExpensesView
+              yearState={activeState}
+              computedYear={computedYear}
+              onUpdateTransfers={handleUpdateTransfers}
+              showToast={showToast}
+            />
+          </div>
+
         ) : (
           
           /* Main Workspace - Multi exercise accounting and monthly payroll logs */

@@ -22,6 +22,7 @@ export const YearTabs: React.FC<YearTabsProps> = ({
 }) => {
   const [editingYear, setEditingYear] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [confirmDeleteYear, setConfirmDeleteYear] = useState<number | null>(null);
 
   const startEditing = (year: number) => {
     setEditingYear(year);
@@ -87,7 +88,7 @@ export const YearTabs: React.FC<YearTabsProps> = ({
                 ? 'bg-white border-slate-200 text-blue-600 font-extrabold border-t-2 border-t-blue-600 shadow-xs z-10'
                 : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-200/50 cursor-pointer'
             }`}
-            onClick={() => !isEditing && onSelectYear(yr)}
+            onClick={() => !isEditing && confirmDeleteYear !== yr && onSelectYear(yr)}
             onDoubleClick={() => !isEditing && startEditing(yr)}
           >
             {isEditing ? (
@@ -112,11 +113,38 @@ export const YearTabs: React.FC<YearTabsProps> = ({
                   <Check className="w-3.5 h-3.5" />
                 </button>
               </div>
+            ) : confirmDeleteYear === yr ? (
+              <div className="flex items-center gap-1 bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                <span className="font-sans text-[10px] font-bold">¿Borrar?</span>
+                <button
+                  id={`btn-confirm-delete-${yr}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteYear(yr);
+                    setConfirmDeleteYear(null);
+                  }}
+                  className="p-0.5 hover:bg-red-100 rounded text-red-600 cursor-pointer"
+                  title="Confirmar eliminación"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  id={`btn-cancel-delete-${yr}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDeleteYear(null);
+                  }}
+                  className="p-0.5 hover:bg-slate-200 rounded text-slate-500 cursor-pointer"
+                  title="Cancelar"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             ) : (
               <span className="font-mono tracking-wide">{yr}</span>
             )}
 
-            {!isEditing && (
+            {!isEditing && confirmDeleteYear !== yr && (
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity ml-1.5">
                 <button
                   id={`btn-edit-year-${yr}`}
@@ -134,9 +162,7 @@ export const YearTabs: React.FC<YearTabsProps> = ({
                     id={`btn-delete-year-${yr}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`¿Seguro que deseas eliminar el año ${yr} y todos sus datos?`)) {
-                        onDeleteYear(yr);
-                      }
+                      setConfirmDeleteYear(yr);
                     }}
                     className="p-0.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded cursor-pointer animate-fade-in"
                     title="Eliminar año"

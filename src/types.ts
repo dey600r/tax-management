@@ -1,4 +1,4 @@
-export type ActiveView = 'dashboard' | 'cuenta-anual';
+export type ActiveView = 'dashboard' | 'cuenta-anual' | 'ahorros-gastos';
 
 export interface EmployeeData {
   nombre: string;
@@ -96,6 +96,15 @@ export interface InvestmentRow {
   comisionDeducible: boolean;
 }
 
+export interface TransferRow {
+  id: string;
+  cuentaOrigen: string;
+  cuentaDestino: string;
+  concepto: string;
+  tipo: 'Gasto Fijo' | 'Gasto Estimado' | 'Inversion Fija' | 'Inversion Estimada' | 'Ahorro';
+  importe: number;
+}
+
 export interface YearState {
   year: number;
   months: Record<MonthId, MonthState>;
@@ -106,6 +115,7 @@ export interface YearState {
   rendimientoTrabajo: number;
   taxExemptions: TaxExemptions;
   inversiones?: InvestmentRow[];
+  transfers?: Record<string, TransferRow[]>; // key is monthId
 }
 
 export interface AppState {
