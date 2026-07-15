@@ -34,12 +34,14 @@ const CALENDAR_MONTHS: { id: MonthId; label: string }[] = [
   { id: 'abril', label: 'Abril' },
   { id: 'mayo', label: 'Mayo' },
   { id: 'junio', label: 'Junio' },
+  { id: 'extra1', label: 'Paga Extra 1' },
   { id: 'julio', label: 'Julio' },
   { id: 'agosto', label: 'Agosto' },
   { id: 'septiembre', label: 'Septiembre' },
   { id: 'octubre', label: 'Octubre' },
   { id: 'noviembre', label: 'Noviembre' },
   { id: 'diciembre', label: 'Diciembre' },
+  { id: 'extra2', label: 'Paga Extra 2' },
 ];
 
 const TIPO_OPTIONS = [
@@ -101,8 +103,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<MonthId>('enero');
   
   // Collapsible toggle states
-  const [isTransfersOpen, setIsTransfersOpen] = useState(true);
-  const [isExpensesOpen, setIsExpensesOpen] = useState(true);
+  const [isTransfersOpen, setIsTransfersOpen] = useState(false);
+  const [isExpensesOpen, setIsExpensesOpen] = useState(false);
 
   // Hover states for Donut SVG Charts
   const [hoveredTransferIdx, setHoveredTransferIdx] = useState<number | null>(null);
@@ -167,6 +169,11 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
     ? validCapReacciones.reduce((sum, v) => sum + v, 0) / validCapReacciones.length
     : null;
 
+  const totalCapReaccionEuros = monthExpenses.reduce((sum, r) => {
+    const cap = r.capReaccion !== null && r.capReaccion !== undefined && !isNaN(r.capReaccion) ? r.capReaccion : 0;
+    return sum + (r.importe * cap) / 100;
+  }, 0);
+
   // Summary Expenses grouped by CLASIFICACION (Category)
   const expensesSummaryRows = EXPENSE_CLASIFICACION_OPTIONS.map((clasificacion) => {
     const items = monthExpenses.filter((r) => r.clasificacion === clasificacion);
@@ -190,28 +197,43 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const expensesSummaryTotalRestoPct = Math.max(0, 100 - expensesSummaryTotalSumaPct);
 
   // -------------------------------------------------------------
-  // AGGREGATED METRICS (KPI ROW)
+  // INDEPENDENT METRICS (KPI STATES)
   // -------------------------------------------------------------
-  const totalCombinedCommitted = totalTransfersImporte + totalExpensesImporte;
-  const totalCombinedPercent = netoNomina > 0 ? (totalCombinedCommitted / netoNomina) * 100 : 0;
-  const saldoLibreFinal = netoNomina - totalCombinedCommitted;
+  
+  // Transfers Status Configuration
+  let transfersStatusColor = 'text-emerald-600 bg-emerald-500/10 border-emerald-200';
+  let transfersProgressColor = 'bg-emerald-500';
+  let transfersBadgeLabel = 'Saludable';
+  let transfersBadgeIcon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
 
-  // Colors based on consumption threshold rules
-  let statusColor = 'text-emerald-600 bg-emerald-500/10 border-emerald-200';
-  let progressColor = 'bg-emerald-500';
-  let badgeLabel = 'Saludable';
-  let badgeIcon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+  if (totalTransfersPorcentajeNeto >= 90 && totalTransfersPorcentajeNeto < 100) {
+    transfersStatusColor = 'text-amber-600 bg-amber-500/10 border-amber-200';
+    transfersProgressColor = 'bg-amber-500';
+    transfersBadgeLabel = 'Límite cercano';
+    transfersBadgeIcon = <AlertTriangle className="w-4 h-4 text-amber-500" />;
+  } else if (totalTransfersPorcentajeNeto >= 100) {
+    transfersStatusColor = 'text-rose-600 bg-rose-500/10 border-rose-200';
+    transfersProgressColor = 'bg-rose-500';
+    transfersBadgeLabel = 'Supera nómina';
+    transfersBadgeIcon = <AlertTriangle className="w-4 h-4 text-rose-500" />;
+  }
 
-  if (totalCombinedPercent >= 90 && totalCombinedPercent < 100) {
-    statusColor = 'text-amber-600 bg-amber-500/10 border-amber-200';
-    progressColor = 'bg-amber-500';
-    badgeLabel = 'Límite cercano';
-    badgeIcon = <AlertTriangle className="w-4 h-4 text-amber-500" />;
-  } else if (totalCombinedPercent >= 100) {
-    statusColor = 'text-rose-600 bg-rose-500/10 border-rose-200';
-    progressColor = 'bg-rose-500';
-    badgeLabel = 'Supera nómina';
-    badgeIcon = <AlertTriangle className="w-4 h-4 text-rose-500" />;
+  // Expenses Status Configuration
+  let expensesStatusColor = 'text-emerald-600 bg-emerald-500/10 border-emerald-200';
+  let expensesProgressColor = 'bg-emerald-500';
+  let expensesBadgeLabel = 'Saludable';
+  let expensesBadgeIcon = <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+
+  if (totalExpensesPorcentajeNeto >= 90 && totalExpensesPorcentajeNeto < 100) {
+    expensesStatusColor = 'text-amber-600 bg-amber-500/10 border-amber-200';
+    expensesProgressColor = 'bg-amber-500';
+    expensesBadgeLabel = 'Límite cercano';
+    expensesBadgeIcon = <AlertTriangle className="w-4 h-4 text-amber-500" />;
+  } else if (totalExpensesPorcentajeNeto >= 100) {
+    expensesStatusColor = 'text-rose-600 bg-rose-500/10 border-rose-200';
+    expensesProgressColor = 'bg-rose-500';
+    expensesBadgeLabel = 'Supera nómina';
+    expensesBadgeIcon = <AlertTriangle className="w-4 h-4 text-rose-500" />;
   }
 
   // -------------------------------------------------------------
@@ -304,6 +326,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
     const newRow: ExpenseRow = {
       id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       cuentaOrigen: '',
+      concepto: '',
       tipo: 'Gasto Fijo',
       clasificacion: 'Vivienda',
       importe: 0,
@@ -422,68 +445,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Total Committed */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-total-importe">
-          <div className="p-3 rounded-lg bg-amber-500/5 text-amber-500">
+        {/* Card 2: Total Transfers */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-total-transfers">
+          <div className="p-3 rounded-lg bg-blue-500/5 text-blue-600">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="block font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Suma Transferencias
+            </span>
+            <span className="block font-mono text-lg font-extrabold text-slate-800">
+              {totalTransfersImporte.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+            </span>
+            <span className="block text-[10px] text-slate-400 font-medium">
+              {monthTransfers.length} operaciones programadas
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Total Expenses */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-total-expenses">
+          <div className="p-3 rounded-lg bg-rose-500/5 text-rose-500">
             <Coins className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="block font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Total Comprometido
+              Suma Gastos Registrados
             </span>
             <span className="block font-mono text-lg font-extrabold text-slate-800">
-              {totalCombinedCommitted.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
-            </span>
-            <div className="flex items-center gap-2 mt-0.5 text-[9px] text-slate-400 font-medium">
-              <span className="truncate">Tf: {totalTransfersImporte.toLocaleString('es-ES')} €</span>
-              <span>•</span>
-              <span className="truncate">Gs: {totalExpensesImporte.toLocaleString('es-ES')} €</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Free Balance */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-saldo-libre">
-          <div className={`p-3 rounded-lg ${saldoLibreFinal >= 0 ? 'bg-emerald-500/5 text-emerald-600' : 'bg-rose-500/5 text-rose-600'}`}>
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="block font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Saldo Libre Final
-            </span>
-            <span className={`block font-mono text-lg font-extrabold ${saldoLibreFinal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {saldoLibreFinal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+              {totalExpensesImporte.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
             </span>
             <span className="block text-[10px] text-slate-400 font-medium">
-              Sobrante real tras transferencias y gastos
+              {monthExpenses.length} partidas presupuestadas
             </span>
           </div>
         </div>
 
-        {/* Card 4: Percent Consumed */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-pct">
-          <div className={`p-3 rounded-lg ${statusColor}`}>
-            {badgeIcon}
+        {/* Card 4: Capacidad de Reacción */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4.5 shadow-2xs flex items-center gap-4" id="card-savings-capacidad-reaccion">
+          <div className="p-3 rounded-lg bg-emerald-500/5 text-emerald-600">
+            <Gauge className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="block font-sans text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              % Consumo de Nómina
+              Capacidad de Reacción
             </span>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-mono text-lg font-extrabold text-slate-800">
-                {totalCombinedPercent.toFixed(2)}%
-              </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
-                {badgeLabel}
-              </span>
-            </div>
-            {/* Progress bar */}
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${progressColor}`}
-                style={{ width: `${Math.min(100, totalCombinedPercent)}%` }}
-              />
-            </div>
+            <span className="block font-mono text-lg font-extrabold text-emerald-600">
+              {totalCapReaccionEuros.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+            </span>
+            <span className="block text-[10px] text-slate-400 font-medium">
+              {promedioCapReaccion !== null ? `${promedioCapReaccion.toFixed(1)}%` : '0.0%'} de media ponderada
+            </span>
           </div>
         </div>
       </div>
@@ -495,23 +507,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
         {/* Clickable Header */}
         <div 
           onClick={() => setIsTransfersOpen(!isTransfersOpen)}
-          className="flex justify-between items-center px-5 py-4 bg-slate-50 border-b border-slate-100 cursor-pointer select-none hover:bg-slate-100/70 transition-colors"
+          className="flex flex-col sm:flex-row justify-between sm:items-center px-5 py-4 bg-slate-50 border-b border-slate-100 cursor-pointer select-none hover:bg-slate-100/70 transition-colors gap-4"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded bg-blue-500/10 text-blue-600">
+          {/* Left Side: Title & Info */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-1.5 rounded bg-blue-500/10 text-blue-600 shrink-0">
               <TrendingUp className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-sans font-extrabold text-slate-800 text-sm tracking-tight flex items-center gap-2">
                 1. Transferencias Automáticas Mensuales
               </h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Suma: <span className="font-bold text-slate-700">{totalTransfersImporte.toLocaleString('es-ES')} €</span> ({totalTransfersPorcentajeNeto.toFixed(1)}% del neto) • {monthTransfers.length} operaciones
-              </p>
             </div>
           </div>
-          <div className="text-slate-400 p-1 hover:text-slate-600 rounded transition-colors">
-            {isTransfersOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+
+          {/* Right Side: KPI Badge & Chevron */}
+          <div className="flex items-center gap-4 ml-auto sm:ml-0 shrink-0">
+            {/* Embedded compact % Card */}
+            <div 
+              className="bg-white border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-3xs flex items-center gap-3 text-left w-52 sm:w-56"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <div className={`p-1.5 rounded-lg ${transfersStatusColor} shrink-0`}>
+                {transfersBadgeIcon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="block font-sans text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                  % Consumo de Nómina
+                </span>
+                <div className="flex items-baseline justify-between gap-1.5 mt-0.5">
+                  <span className="font-mono text-xs font-extrabold text-slate-800 leading-none">
+                    {totalTransfersPorcentajeNeto.toFixed(2)}%
+                  </span>
+                  <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full border bg-slate-50 text-slate-500 border-slate-200/60 leading-none shrink-0">
+                    {transfersBadgeLabel}
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${transfersProgressColor}`}
+                    style={{ width: `${Math.min(100, totalTransfersPorcentajeNeto)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="text-slate-400 p-1 hover:text-slate-600 rounded transition-colors">
+              {isTransfersOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
           </div>
         </div>
 
@@ -915,23 +961,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
         {/* Clickable Header */}
         <div 
           onClick={() => setIsExpensesOpen(!isExpensesOpen)}
-          className="flex justify-between items-center px-5 py-4 bg-slate-50 border-b border-slate-100 cursor-pointer select-none hover:bg-slate-100/70 transition-colors"
+          className="flex flex-col sm:flex-row justify-between sm:items-center px-5 py-4 bg-slate-50 border-b border-slate-100 cursor-pointer select-none hover:bg-slate-100/70 transition-colors gap-4"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded bg-rose-500/10 text-rose-600">
+          {/* Left Side: Title & Info */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-1.5 rounded bg-rose-500/10 text-rose-600 shrink-0">
               <Coins className="w-4 h-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-sans font-extrabold text-slate-800 text-sm tracking-tight flex items-center gap-2">
                 2. Registro y Control de Gastos Mensuales
               </h3>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Suma: <span className="font-bold text-slate-700">{totalExpensesImporte.toLocaleString('es-ES')} €</span> ({totalExpensesPorcentajeNeto.toFixed(1)}% del neto) • Reacción media: <span className="font-bold text-slate-700">{promedioCapReaccion !== null ? `${promedioCapReaccion.toFixed(1)}%` : 'N/A'}</span> • {monthExpenses.length} partidas
-              </p>
             </div>
           </div>
-          <div className="text-slate-400 p-1 hover:text-slate-600 rounded transition-colors">
-            {isExpensesOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+
+          {/* Right Side: KPI Badge & Chevron */}
+          <div className="flex items-center gap-4 ml-auto sm:ml-0 shrink-0">
+            {/* Embedded compact % Card */}
+            <div 
+              className="bg-white border border-slate-200/80 rounded-xl px-3 py-1.5 shadow-3xs flex items-center gap-3 text-left w-52 sm:w-56"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <div className={`p-1.5 rounded-lg ${expensesStatusColor} shrink-0`}>
+                {expensesBadgeIcon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="block font-sans text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                  % Consumo de Nómina
+                </span>
+                <div className="flex items-baseline justify-between gap-1.5 mt-0.5">
+                  <span className="font-mono text-xs font-extrabold text-slate-800 leading-none">
+                    {totalExpensesPorcentajeNeto.toFixed(2)}%
+                  </span>
+                  <span className="text-[8px] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full border bg-slate-50 text-slate-500 border-slate-200/60 leading-none shrink-0">
+                    {expensesBadgeLabel}
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-slate-100 rounded-full h-1 mt-1 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${expensesProgressColor}`}
+                    style={{ width: `${Math.min(100, totalExpensesPorcentajeNeto)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="text-slate-400 p-1 hover:text-slate-600 rounded transition-colors">
+              {isExpensesOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
           </div>
         </div>
 
@@ -972,6 +1052,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                     <th className="p-3 pl-4">Cuenta Origen</th>
                     <th className="p-3 w-40">Tipo</th>
                     <th className="p-3 w-44">Clasificación</th>
+                    <th className="p-3">Concepto</th>
                     <th className="p-3 text-right w-36">Importe (€)</th>
                     <th className="p-3 text-right w-32">% Neto</th>
                     <th className="p-3 text-right w-40">Cap. Reacción %</th>
@@ -981,7 +1062,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {monthExpenses.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
+                      <td colSpan={8} className="p-8 text-center text-slate-400 font-medium">
                         No hay gastos mensuales registrados en este mes. Haz clic en "Añadir Gasto" para empezar.
                       </td>
                     </tr>
@@ -1029,6 +1110,17 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                                 </option>
                               ))}
                             </select>
+                          </td>
+
+                          {/* Concepto */}
+                          <td className="p-1.5">
+                            <input
+                              type="text"
+                              value={row.concepto || ''}
+                              placeholder="p. ej. Alquiler o compra"
+                              onChange={(e) => handleUpdateExpenseField(index, 'concepto', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 transition-all font-sans"
+                            />
                           </td>
 
                           {/* Importe */}
@@ -1081,7 +1173,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 {monthExpenses.length > 0 && (
                   <tfoot>
                     <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
-                      <td colSpan={3} className="py-2.5 pl-[17px] text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
+                      <td colSpan={4} className="py-2.5 pl-[17px] text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
                         Totales
                       </td>
                       <td className="py-2.5 pr-2 text-right text-slate-900">
@@ -1096,8 +1188,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                       }`}>
                         {totalExpensesPorcentajeNeto.toFixed(2)}%
                       </td>
-                      <td className="py-2.5 pr-4 text-right font-mono text-slate-700 text-[11px]">
-                        Media: <span className="font-extrabold text-slate-900">{promedioCapReaccion !== null ? `${promedioCapReaccion.toFixed(2)}%` : 'N/A'}</span>
+                      <td className="py-2.5 pr-4 text-right font-mono text-slate-900">
+                        {totalCapReaccionEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                       </td>
                       <td></td>
                     </tr>

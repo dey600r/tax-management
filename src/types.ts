@@ -108,6 +108,7 @@ export interface TransferRow {
 export interface ExpenseRow {
   id: string;
   cuentaOrigen: string;
+  concepto?: string;
   tipo: 'Gasto Fijo' | 'Gasto Estimado' | 'Inversion Fija' | 'Inversion estimada' | 'Ahorro';
   clasificacion: 'Vivienda' | 'Alimentacion' | 'Ocio' | 'Trabajo' | 'Vehiculos' | 'Inversion' | 'Regalos' | 'Ahorro' | 'Ropa';
   importe: number;
