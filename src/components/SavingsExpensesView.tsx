@@ -127,10 +127,12 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const [hoveredTransferIdx, setHoveredTransferIdx] = useState<number | null>(null);
   const [hoveredExpenseIdx, setHoveredExpenseIdx] = useState<number | null>(null);
   const [hoveredExpenseTypeIdx, setHoveredExpenseTypeIdx] = useState<number | null>(null);
+  const [hoveredAnnualIdx, setHoveredAnnualIdx] = useState<number | null>(null);
   
   const [transferTooltipPos, setTransferTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [expenseTooltipPos, setExpenseTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [expenseTypeTooltipPos, setExpenseTypeTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [annualTooltipPos, setAnnualTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   // Active month data
   const monthTransfers = yearState.transfers?.[selectedMonth] || [];
@@ -236,6 +238,60 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const expensesTypeSummaryTotalSumaPct = netoNomina > 0 ? (expensesTypeSummaryTotalSumaEuros / netoNomina) * 100 : 0;
   const expensesTypeSummaryTotalRestoEuros = netoNomina - expensesTypeSummaryTotalSumaEuros;
   const expensesTypeSummaryTotalRestoPct = Math.max(0, 100 - expensesTypeSummaryTotalSumaPct);
+
+  // -------------------------------------------------------------
+  // CALCULATIONS: ANNUAL EXPENSES BY CLASIFICACION (Category)
+  // -------------------------------------------------------------
+  const annualExpensesRows = EXPENSE_CLASIFICACION_OPTIONS.map((clasificacion) => {
+    let sumaEuros = 0;
+    CALENDAR_MONTHS.forEach((m) => {
+      const mExpenses = yearState.expenses?.[m.id] || [];
+      const items = mExpenses.filter((r) => r.clasificacion === clasificacion);
+      sumaEuros += items.reduce((sum, r) => sum + r.importe, 0);
+    });
+    return {
+      clasificacion,
+      sumaEuros,
+    };
+  });
+
+  const annualExpensesTotalSumaEuros = annualExpensesRows.reduce((sum, r) => sum + r.sumaEuros, 0);
+
+  const annualTotalNeto = CALENDAR_MONTHS.reduce((sum, m) => {
+    return sum + (computedYear.months[m.id]?.neto || 0);
+  }, 0);
+
+  const annualRestoNeto = Math.max(0, annualTotalNeto - annualExpensesTotalSumaEuros);
+  const annualTotalForChart = Math.max(annualTotalNeto, annualExpensesTotalSumaEuros);
+
+  const annualExpensesSummaryRows = annualExpensesRows.map((row) => {
+    const sumaPct = annualTotalForChart > 0 ? (row.sumaEuros / annualTotalForChart) * 100 : 0;
+    return {
+      ...row,
+      sumaPct,
+    };
+  });
+
+  const annualChartSegments: { label: string; value: number; pct: number; color: string }[] = [];
+
+  if (annualRestoNeto > 0) {
+    const restoPct = annualTotalForChart > 0 ? (annualRestoNeto / annualTotalForChart) * 100 : 0;
+    annualChartSegments.push({
+      label: 'Nómina sobrante',
+      value: annualRestoNeto,
+      pct: restoPct,
+      color: '#cbd5e1', // un color gris clarito
+    });
+  }
+
+  annualChartSegments.push(
+    ...annualExpensesSummaryRows.map((row) => ({
+      label: row.clasificacion as string,
+      value: row.sumaEuros,
+      pct: row.sumaPct,
+      color: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] || '#94a3b8',
+    }))
+  );
 
   // -------------------------------------------------------------
   // INDEPENDENT METRICS (KPI STATES)
@@ -444,9 +500,186 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
     setHoveredExpenseTypeIdx(idx);
   };
 
+  const handleAnnualMouseMove = (e: React.MouseEvent<SVGCircleElement>, idx: number) => {
+    const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (rect) {
+      setAnnualTooltipPos({
+        x: e.clientX - rect.left + 12,
+        y: e.clientY - rect.top - 12,
+      });
+    }
+    setHoveredAnnualIdx(idx);
+  };
+
   return (
     <div className="space-y-6" id="savings-expenses-view-root">
       
+      {/* ====================================================================== */}
+      {/* GRÁFICO: DISTRIBUCIÓN VISUAL ANUAL DE GASTOS */}
+      {/* ====================================================================== */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 space-y-4" id="annual-expenses-distribution-card">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-3 gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded bg-blue-500/10 text-blue-600 shrink-0">
+              <PieIcon className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-sans font-extrabold text-slate-800 text-sm tracking-tight">
+                Distribución Visual Anual de Gastos
+              </h3>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Resumen acumulado del año por clasificación o categoría
+              </p>
+            </div>
+          </div>
+          
+          <div className="bg-slate-50 border border-slate-150 rounded-lg px-3 py-1.5 flex items-center gap-2.5 shrink-0">
+            <div className="p-1 rounded-md bg-rose-500/10 text-rose-500 shrink-0">
+              <Coins className="w-3.5 h-3.5" />
+            </div>
+            <div className="text-left">
+              <span className="block font-sans text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                Total Gastado Año
+              </span>
+              <span className="font-mono text-xs font-bold text-slate-800 leading-none">
+                {annualExpensesTotalSumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {annualExpensesTotalSumaEuros === 0 ? (
+          <div className="py-6 text-center text-xs text-slate-400 font-medium">
+            No hay gastos registrados en ningún mes de este año. Registra gastos para ver la distribución anual.
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-around gap-6 pt-2">
+            
+            {/* SVG Donut */}
+            <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
+                <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
+                {(() => {
+                  let accumulatedPercentage = 0;
+                  return annualChartSegments.map((seg, idx) => {
+                    if (seg.value <= 0) return null;
+                    const segmentPercentage = seg.value / annualTotalForChart;
+                    const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
+                    const strokeDashoffset = -((accumulatedPercentage) * 439.82);
+                    accumulatedPercentage += segmentPercentage;
+
+                    const isHovered = hoveredAnnualIdx === idx;
+
+                    return (
+                      <circle
+                        key={idx}
+                        cx="80"
+                        cy="80"
+                        r={70}
+                        fill="transparent"
+                        stroke={seg.color}
+                        strokeWidth={isHovered ? 20 : 16}
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        className="transition-all duration-200 cursor-pointer"
+                        onMouseMove={(e) => handleAnnualMouseMove(e, idx)}
+                        onMouseEnter={() => setHoveredAnnualIdx(idx)}
+                        onMouseLeave={() => {
+                          setHoveredAnnualIdx(null);
+                          setAnnualTooltipPos(null);
+                        }}
+                      />
+                    );
+                  });
+                })()}
+              </svg>
+
+              {/* Center Text */}
+              <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
+                {(() => {
+                  if (hoveredAnnualIdx !== null && annualChartSegments[hoveredAnnualIdx]) {
+                    const activeSeg = annualChartSegments[hoveredAnnualIdx];
+                    return (
+                      <>
+                        <span className="block text-[9px] font-bold uppercase tracking-wider truncate max-w-[100px] mx-auto" style={{ color: activeSeg.color }}>
+                          {activeSeg.label}
+                        </span>
+                        <span className="block text-sm font-extrabold text-slate-800 mt-0.5 whitespace-nowrap">
+                          {activeSeg.value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                        </span>
+                        <span className="block text-[10px] font-bold text-slate-500 font-mono">
+                          {activeSeg.pct.toFixed(1)}%
+                        </span>
+                      </>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        Total Neto
+                      </span>
+                      <span className="block text-sm font-extrabold text-slate-800 mt-0.5 whitespace-nowrap">
+                        {annualTotalNeto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Legend Grid */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs w-full max-w-md">
+              {annualChartSegments.map((row, idx) => {
+                if (row.value <= 0) return null;
+                const isHovered = hoveredAnnualIdx === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-between p-1.5 rounded-lg border border-transparent transition-all duration-150 cursor-pointer ${
+                      hoveredAnnualIdx !== null && !isHovered ? 'opacity-45 scale-95' : 'bg-slate-50 hover:border-slate-200'
+                    }`}
+                    onMouseEnter={() => setHoveredAnnualIdx(idx)}
+                    onMouseLeave={() => setHoveredAnnualIdx(null)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }} />
+                      <span className={`font-sans font-medium text-slate-600 truncate ${isHovered ? 'text-slate-950 font-bold' : ''}`}>
+                        {row.label}
+                      </span>
+                    </div>
+                    <div className="text-right font-mono text-[11px] font-bold text-slate-700 pl-2 shrink-0">
+                      {row.value.toLocaleString('es-ES', { maximumFractionDigits: 0 })} €
+                      <span className="text-slate-400 font-medium text-[9px] ml-1">({row.pct.toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Floating Tooltip */}
+            {hoveredAnnualIdx !== null && annualTooltipPos && (() => {
+              const seg = annualChartSegments[hoveredAnnualIdx];
+              if (!seg) return null;
+              return (
+                <div
+                  className="absolute z-10 bg-slate-900/95 text-white text-[11px] font-sans rounded-lg py-1.5 px-2.5 shadow-md pointer-events-none space-y-0.5 border border-slate-800/50 backdrop-blur-xs font-medium"
+                  style={{ left: annualTooltipPos.x, top: annualTooltipPos.y }}
+                >
+                  <div className="font-bold text-slate-300">{seg.label}</div>
+                  <div className="font-mono text-white flex items-center gap-1.5">
+                    <span>{seg.value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                    <span style={{ color: seg.color }} className="font-bold">({seg.pct.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+          </div>
+        )}
+      </div>
+
       {/* Horizontal Month Selector Tabs */}
       <div className="overflow-x-auto border-b border-slate-200 pb-px" id="savings-month-tabs-container">
         <div className="flex gap-1.5 min-w-max pb-2">
@@ -468,9 +701,25 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 }`}
               >
                 <span>{m.label}</span>
-                {hasData && (
-                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : 'bg-blue-500'}`} />
-                )}
+                {hasData && (() => {
+                  const netoForM = computedYear.months[m.id]?.neto || 0;
+                  const expensesForM = yearState.expenses?.[m.id] || [];
+                  const totalExpensesForM = expensesForM.reduce((sum, r) => sum + r.importe, 0);
+                  const pctForM = netoForM > 0 
+                    ? (totalExpensesForM / netoForM) * 100 
+                    : (totalExpensesForM > 0 ? 100 : 0);
+
+                  let dotColorClass = 'bg-emerald-500';
+                  if (pctForM >= 90 && pctForM < 100) {
+                    dotColorClass = 'bg-amber-500';
+                  } else if (pctForM >= 100) {
+                    dotColorClass = 'bg-rose-500';
+                  }
+
+                  return (
+                    <span className={`w-1.5 h-1.5 rounded-full ${dotColorClass} ${isActive ? 'ring-1 ring-white/60 shadow-2xs' : ''}`} />
+                  );
+                })()}
               </button>
             );
           })}
