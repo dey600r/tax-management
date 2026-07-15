@@ -16,8 +16,18 @@ import {
   Coins, 
   Tag, 
   Percent, 
-  Gauge 
+  Gauge,
+  Briefcase
 } from 'lucide-react';
+
+const TIPO_FRIENDLY_LABELS: Record<string, string> = {
+  'Gasto Fijo': 'Gasto Fijo',
+  'Gasto Estimado': 'Gasto Estimado',
+  'Inversion Fija': 'Inversión Fija',
+  'Inversion Estimada': 'Inversión Estimada',
+  'Inversion estimada': 'Inversión Estimada',
+  'Ahorro': 'Ahorro',
+};
 
 interface SavingsExpensesViewProps {
   yearState: YearState;
@@ -58,6 +68,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Inversion Fija': '#6366f1',   // Indigo 500
   'Inversion Estimada': '#38bdf8', // Sky 400
   'Ahorro': '#10b981',           // Emerald 500
+};
+
+const getTipoColor = (tipo: string): string => {
+  if (tipo === 'Inversion estimada' || tipo === 'Inversion Estimada') {
+    return CATEGORY_COLORS['Inversion Estimada'];
+  }
+  return CATEGORY_COLORS[tipo] || '#94a3b8';
 };
 
 // MASTER OPTIONS FOR EXPENSES
@@ -109,9 +126,11 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   // Hover states for Donut SVG Charts
   const [hoveredTransferIdx, setHoveredTransferIdx] = useState<number | null>(null);
   const [hoveredExpenseIdx, setHoveredExpenseIdx] = useState<number | null>(null);
+  const [hoveredExpenseTypeIdx, setHoveredExpenseTypeIdx] = useState<number | null>(null);
   
   const [transferTooltipPos, setTransferTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [expenseTooltipPos, setExpenseTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [expenseTypeTooltipPos, setExpenseTypeTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
   // Active month data
   const monthTransfers = yearState.transfers?.[selectedMonth] || [];
@@ -195,6 +214,28 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const expensesSummaryTotalSumaPct = netoNomina > 0 ? (expensesSummaryTotalSumaEuros / netoNomina) * 100 : 0;
   const expensesSummaryTotalRestoEuros = netoNomina - expensesSummaryTotalSumaEuros;
   const expensesSummaryTotalRestoPct = Math.max(0, 100 - expensesSummaryTotalSumaPct);
+
+  // Summary Expenses grouped by TIPO (Expense Type)
+  const expensesTypeSummaryRows = EXPENSE_TIPO_OPTIONS.map((tipo) => {
+    const items = monthExpenses.filter((r) => r.tipo === tipo);
+    const sumaEuros = items.reduce((sum, r) => sum + r.importe, 0);
+    const sumaPct = netoNomina > 0 ? (sumaEuros / netoNomina) * 100 : 0;
+    const restoEuros = netoNomina - sumaEuros;
+    const restoPct = Math.max(0, 100 - sumaPct);
+
+    return {
+      tipo,
+      sumaEuros,
+      sumaPct,
+      restoEuros,
+      restoPct,
+    };
+  });
+
+  const expensesTypeSummaryTotalSumaEuros = expensesTypeSummaryRows.reduce((sum, r) => sum + r.sumaEuros, 0);
+  const expensesTypeSummaryTotalSumaPct = netoNomina > 0 ? (expensesTypeSummaryTotalSumaEuros / netoNomina) * 100 : 0;
+  const expensesTypeSummaryTotalRestoEuros = netoNomina - expensesTypeSummaryTotalSumaEuros;
+  const expensesTypeSummaryTotalRestoPct = Math.max(0, 100 - expensesTypeSummaryTotalSumaPct);
 
   // -------------------------------------------------------------
   // INDEPENDENT METRICS (KPI STATES)
@@ -390,6 +431,17 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
       });
     }
     setHoveredExpenseIdx(idx);
+  };
+
+  const handleExpenseTypeMouseMove = (e: React.MouseEvent<SVGCircleElement>, idx: number) => {
+    const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (rect) {
+      setExpenseTypeTooltipPos({
+        x: e.clientX - rect.left + 12,
+        y: e.clientY - rect.top - 12,
+      });
+    }
+    setHoveredExpenseTypeIdx(idx);
   };
 
   return (
@@ -1200,7 +1252,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
             {/* Side-by-side Summaries for Expenses */}
             {monthExpenses.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Expenses Summary Table */}
                 <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between">
                   <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/70">
@@ -1426,6 +1479,240 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                         );
                       })()}
 
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Side-by-side Summaries for Expenses by Type */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Expenses Type Summary Table */}
+                  <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between">
+                    <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/70">
+                      <h3 className="font-sans font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-2">
+                        <Briefcase className="w-3.5 h-3.5 text-rose-500" />
+                        Resumen de Gastos por Tipo (Estructura de Gasto)
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto flex-1">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                            <th className="p-3 pl-4">Tipo</th>
+                            <th className="p-3 text-right w-32">Suma (€)</th>
+                            <th className="p-3 text-right w-24">Suma (%)</th>
+                            <th className="p-3 text-right w-32">Resto (€)</th>
+                            <th className="p-3 text-right w-24">Resto (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {expensesTypeSummaryRows.map((row) => (
+                            <tr key={row.tipo} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
+                                <span>{TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}</span>
+                              </td>
+                              <td className="p-3 text-right font-mono font-bold text-slate-800">
+                                {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className="p-3 text-right font-mono font-bold text-slate-600">
+                                {row.sumaPct.toFixed(2)}%
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoPct.toFixed(2)}%
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
+                            <td className="py-3 pl-4 text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
+                              Total
+                            </td>
+                            <td className="p-3 text-right text-slate-950 font-extrabold">
+                              {expensesTypeSummaryTotalSumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                            </td>
+                            <td className={`p-3 text-right font-black ${
+                              expensesTypeSummaryTotalSumaPct < 90 ? 'text-emerald-600' : expensesTypeSummaryTotalSumaPct < 100 ? 'text-amber-600' : 'text-rose-600'
+                            }`}>
+                              {expensesTypeSummaryTotalSumaPct.toFixed(2)}%
+                            </td>
+                            <td className={`p-3 text-right font-medium ${expensesTypeSummaryTotalRestoEuros >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {expensesTypeSummaryTotalRestoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                            </td>
+                            <td className={`p-3 text-right font-bold ${expensesTypeSummaryTotalRestoPct >= 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                              {expensesTypeSummaryTotalRestoPct.toFixed(2)}%
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Expenses Type Donut Chart */}
+                  <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs p-5 flex flex-col justify-between">
+                    <div className="border-b border-slate-100 pb-3 mb-2">
+                      <h3 className="font-sans font-bold text-slate-800 text-[11px] uppercase tracking-wider flex items-center gap-2">
+                        <PieIcon className="w-3.5 h-3.5 text-rose-500" />
+                        Distribución Visual por Tipo de Gasto
+                      </h3>
+                    </div>
+
+                    <div className="flex-1 flex items-center justify-center mt-2 relative">
+                      <div className="flex flex-col sm:flex-row items-center gap-6 justify-center p-2 relative w-full h-full min-h-[220px]">
+                        
+                        {/* SVG Donut */}
+                        <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 160 160" className="w-full h-full transform -rotate-90">
+                            <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
+                            {(() => {
+                              let accumulatedPercentage = 0;
+                              const segments = expensesTypeSummaryRows.map((row) => {
+                                const value = Math.max(0, row.sumaEuros);
+                                const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
+                                return {
+                                  label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
+                                  value,
+                                  pct,
+                                  color: getTipoColor(row.tipo),
+                                };
+                              });
+
+                              return segments.map((seg, idx) => {
+                                if (seg.value <= 0) return null;
+                                const segmentPercentage = seg.value / expensesTypeSummaryTotalSumaEuros;
+                                const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
+                                const strokeDashoffset = -((accumulatedPercentage) * 439.82);
+                                accumulatedPercentage += segmentPercentage;
+
+                                const isHovered = hoveredExpenseTypeIdx === idx;
+
+                                return (
+                                  <circle
+                                    key={idx}
+                                    cx="80"
+                                    cy="80"
+                                    r={70}
+                                    fill="transparent"
+                                    stroke={seg.color}
+                                    strokeWidth={isHovered ? 20 : 16}
+                                    strokeDasharray={strokeDasharray}
+                                    strokeDashoffset={strokeDashoffset}
+                                    strokeLinecap="round"
+                                    className="transition-all duration-200 cursor-pointer"
+                                    onMouseMove={(e) => handleExpenseTypeMouseMove(e, idx)}
+                                    onMouseEnter={() => setHoveredExpenseTypeIdx(idx)}
+                                    onMouseLeave={() => {
+                                      setHoveredExpenseTypeIdx(null);
+                                      setExpenseTypeTooltipPos(null);
+                                    }}
+                                  />
+                                );
+                              });
+                            })()}
+                          </svg>
+
+                          {/* Center Text */}
+                          <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
+                            {(() => {
+                              const segments = expensesTypeSummaryRows.map((row) => {
+                                const value = Math.max(0, row.sumaEuros);
+                                const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
+                                return {
+                                  label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
+                                  value,
+                                  pct,
+                                  color: getTipoColor(row.tipo),
+                                };
+                              });
+
+                              if (hoveredExpenseTypeIdx !== null && segments[hoveredExpenseTypeIdx]) {
+                                const activeSeg = segments[hoveredExpenseTypeIdx];
+                                return (
+                                  <>
+                                    <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 truncate" style={{ color: activeSeg.color }}>
+                                      {activeSeg.label}
+                                    </span>
+                                    <span className="block text-xs font-extrabold text-slate-800 mt-0.5 whitespace-nowrap">
+                                      {activeSeg.value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                                    </span>
+                                    <span className="block text-[10px] font-bold text-slate-500 font-mono">
+                                      {activeSeg.pct.toFixed(1)}%
+                                    </span>
+                                  </>
+                                );
+                              }
+
+                              return (
+                                <>
+                                  <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                                    Total Gs.
+                                  </span>
+                                  <span className="block text-xs font-extrabold text-slate-800 mt-0.5 whitespace-nowrap">
+                                    {expensesTypeSummaryTotalSumaEuros.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                                  </span>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div className="flex-none flex flex-row sm:flex-col flex-wrap sm:flex-nowrap justify-center gap-x-4 gap-y-1.5 text-[11px] w-full max-w-xs sm:max-w-[150px]">
+                          {expensesTypeSummaryRows.map((row, idx) => {
+                            if (row.sumaEuros <= 0) return null;
+                            const isHovered = hoveredExpenseTypeIdx === idx;
+                            const friendlyLabel = TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo;
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center gap-2 transition-all duration-150 cursor-pointer ${
+                                  hoveredExpenseTypeIdx !== null && !isHovered ? 'opacity-40 scale-95' : 'opacity-100 scale-100'
+                                }`}
+                                onMouseEnter={() => setHoveredExpenseTypeIdx(idx)}
+                                onMouseLeave={() => setHoveredExpenseTypeIdx(null)}
+                              >
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
+                                <span className={`font-sans font-medium text-slate-600 truncate transition-colors ${isHovered ? 'text-slate-900 font-bold' : ''}`}>
+                                  {friendlyLabel}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Floating Tooltip */}
+                        {hoveredExpenseTypeIdx !== null && expenseTypeTooltipPos && (() => {
+                          const segments = expensesTypeSummaryRows.map((row) => {
+                            const value = Math.max(0, row.sumaEuros);
+                            const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
+                            return {
+                              label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
+                              value,
+                              pct,
+                              color: getTipoColor(row.tipo),
+                            };
+                          });
+                          const seg = segments[hoveredExpenseTypeIdx];
+                          if (!seg) return null;
+                          return (
+                            <div
+                              className="absolute z-10 bg-slate-900/95 text-white text-[11px] font-sans rounded-lg py-1.5 px-2.5 shadow-md pointer-events-none space-y-0.5 border border-slate-800/50 backdrop-blur-xs font-medium"
+                              style={{ left: expenseTypeTooltipPos.x, top: expenseTypeTooltipPos.y }}
+                            >
+                              <div className="font-bold text-slate-300">{seg.label}</div>
+                              <div className="font-mono text-white flex items-center gap-1.5">
+                                <span>{seg.value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+                                <span style={{ color: seg.color }} className="font-bold">({seg.pct.toFixed(1)}%)</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                      </div>
                     </div>
                   </div>
                 </div>
