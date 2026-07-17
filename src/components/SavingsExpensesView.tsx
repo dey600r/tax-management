@@ -374,8 +374,18 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
   // Find previous month for copies
   const selectedIndex = CALENDAR_MONTHS.findIndex((m) => m.id === selectedMonth);
-  const prevMonthId = selectedIndex > 0 ? CALENDAR_MONTHS[selectedIndex - 1].id : null;
-  const prevMonthLabel = selectedIndex > 0 ? CALENDAR_MONTHS[selectedIndex - 1].label : '';
+  let prevMonthId: MonthId | null = null;
+  if (selectedMonth === 'julio') {
+    prevMonthId = 'junio';
+  } else if (selectedMonth === 'extra2') {
+    prevMonthId = 'extra1';
+  } else {
+    prevMonthId = selectedIndex > 0 ? CALENDAR_MONTHS[selectedIndex - 1].id : null;
+  }
+
+  const prevMonthLabel = prevMonthId 
+    ? CALENDAR_MONTHS.find((m) => m.id === prevMonthId)?.label || '' 
+    : '';
 
   const handleCopyTransfersFromPrevious = () => {
     if (!prevMonthId) return;
