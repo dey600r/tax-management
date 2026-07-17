@@ -88,6 +88,40 @@ export default function App() {
   const dashboardSummaries: DashboardYearSummary[] = appState.years.map((yr) => {
     const yrState = appState.yearStates[yr] || createDefaultYearState(yr);
     const comp = computeYear(yrState);
+
+    // Calculate annual expenses
+    let totalGastado = 0;
+    const expensesByCategory: Record<string, number> = {
+      Vivienda: 0,
+      Alimentacion: 0,
+      Ocio: 0,
+      Trabajo: 0,
+      Vehiculos: 0,
+      Inversion: 0,
+      Regalos: 0,
+      Ahorro: 0,
+      Ropa: 0,
+    };
+
+    const MONTHS_KEYS = Object.keys(comp.months);
+    MONTHS_KEYS.forEach((mId) => {
+      const mExpenses = yrState.expenses?.[mId] || [];
+      mExpenses.forEach((exp) => {
+        const importVal = exp.importe || 0;
+        totalGastado += importVal;
+        const cat = exp.clasificacion;
+        if (expensesByCategory[cat] !== undefined) {
+          expensesByCategory[cat] += importVal;
+        } else {
+          expensesByCategory[cat] = importVal;
+        }
+      });
+    });
+
+    const totalNetoNomina = MONTHS_KEYS.reduce((sum, mId) => {
+      return sum + (comp.months[mId as MonthId]?.neto || 0);
+    }, 0);
+
     return {
       year: yr,
       salarioBruto: comp.annualSummary.salarioBruto,
@@ -95,6 +129,9 @@ export default function App() {
       retencionCapital: comp.annualSummary.borradorRenta.retencionCapital.pagadoEuro,
       ssEmpleado: comp.annualSummary.borradorRenta.ssEmpleado.pagadoEuro,
       ssEmpresa: comp.annualSummary.borradorRenta.ssEmpresa.pagadoEuro,
+      totalNetoNomina,
+      totalGastado,
+      expensesByCategory,
     };
   });
 

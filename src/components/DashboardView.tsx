@@ -1,5 +1,19 @@
 import React from 'react';
-import { TrendingUp, Award, DollarSign, Calendar, Shield } from 'lucide-react';
+import { 
+  TrendingUp, 
+  Award, 
+  DollarSign, 
+  Calendar, 
+  Shield,
+  PieChart,
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight,
+  Percent,
+  Coins,
+  ChevronUp,
+  ChevronDown
+} from 'lucide-react';
 
 export interface DashboardYearSummary {
   year: number;
@@ -8,6 +22,9 @@ export interface DashboardYearSummary {
   retencionCapital: number;
   ssEmpleado: number;
   ssEmpresa: number;
+  totalNetoNomina?: number;
+  totalGastado?: number;
+  expensesByCategory?: Record<string, number>;
 }
 
 interface DashboardViewProps {
@@ -17,6 +34,9 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
   const [hoveredYearIdx, setHoveredYearIdx] = React.useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
+  const [hoveredExpIdx, setHoveredExpIdx] = React.useState<number | null>(null);
+  const [expTooltipPos, setExpTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
+  const [tableShowPercentage, setTableShowPercentage] = React.useState<boolean>(false);
 
   const hasData = summaries.length > 0 && summaries.some((s) => s.salarioBruto > 0);
 
@@ -414,6 +434,459 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           );
         })()}
       </div>
+
+      {/* ====================================================================== */}
+      {/* 2. RELACIÓN DE GASTOS Y AHORRO INTERANUAL */}
+      {/* ====================================================================== */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm relative" id="card-dashboard-expenses-savings">
+        <div className="mb-2.5 space-y-1">
+          <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+            <Coins className="w-4 h-4 text-rose-500" />
+            2. Relación de Gastos y Ahorro Interanual
+          </h3>
+          <p className="font-sans text-xs text-slate-400 font-medium">
+            Comparativa entre la nómina neta percibida (ingresos), los gastos totales registrados y el ahorro o nómina sobrante (gris clarito)
+          </p>
+        </div>
+
+        {/* SVG Container for Expenses vs Savings */}
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[550px] max-w-[800px] mx-auto relative">
+            {(() => {
+              const expenseSvgWidth = 600;
+              const expenseSvgHeight = 320;
+              const expenseMarginLeft = 60;
+              const expenseMarginRight = 30;
+              const expenseMarginTop = 30;
+              const expenseMarginBottom = 50;
+              const expenseChartWidth = expenseSvgWidth - expenseMarginLeft - expenseMarginRight;
+              const expenseChartHeight = expenseSvgHeight - expenseMarginTop - expenseMarginBottom;
+
+              const maxExpenseVal = Math.max(...summaries.map((s) => Math.max(s.totalNetoNomina ?? 0, s.totalGastado ?? 0)), 100);
+              const expenseYMax = maxExpenseVal * 1.15;
+
+              const getExpenseY = (val: number) => {
+                return expenseSvgHeight - expenseMarginBottom - (val / expenseYMax) * expenseChartHeight;
+              };
+
+              const expenseGroupWidth = expenseChartWidth / numYears;
+              const expenseBarWidth = 36;
+              const expenseTicks = Array.from({ length: 5 }, (_, i) => (expenseYMax / 4) * i);
+
+              return (
+                <>
+                  <svg viewBox={`0 0 ${expenseSvgWidth} ${expenseSvgHeight}`} width="100%" className="overflow-visible">
+                    {/* Horizontal gridlines */}
+                    {expenseTicks.map((tick, i) => {
+                      const y = getExpenseY(tick);
+                      return (
+                        <g key={i} className="opacity-40">
+                          <line
+                            x1={expenseMarginLeft}
+                            y1={y}
+                            x2={expenseSvgWidth - expenseMarginRight}
+                            y2={y}
+                            stroke="#cbd5e1"
+                            strokeWidth="1"
+                            strokeDasharray="4 4"
+                          />
+                          <text
+                            x={expenseMarginLeft - 8}
+                            y={y + 4}
+                            textAnchor="end"
+                            className="font-mono text-[9px] fill-slate-400 font-semibold"
+                          >
+                            {Math.round(tick).toLocaleString('es-ES')}€
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {/* Vertical bars representing each year */}
+                    {summaries.map((s, idx) => {
+                      const groupCenterX = expenseMarginLeft + idx * expenseGroupWidth + expenseGroupWidth / 2;
+                      const netoVal = s.totalNetoNomina ?? Math.max(0, s.salarioBruto - s.retencionIrpf - s.ssEmpleado - s.retencionCapital);
+                      const gastadoVal = s.totalGastado ?? 0;
+                      const sobranteVal = Math.max(0, netoVal - gastadoVal);
+                      const deficitVal = Math.max(0, gastadoVal - netoVal);
+
+                      const isCurrentHovered = hoveredExpIdx === idx;
+
+                      // Coordinates for bars
+                      const barX = groupCenterX - expenseBarWidth / 2;
+
+                      // Stacked Segment heights and offsets
+                      const y0 = getExpenseY(0);
+
+                      // If we are in surplus or balance
+                      const gastosHeight = Math.max(0, y0 - getExpenseY(Math.min(gastadoVal, netoVal)));
+                      const yGastosTop = y0 - gastosHeight;
+
+                      const sobranteHeight = Math.max(0, getExpenseY(Math.min(gastadoVal, netoVal)) - getExpenseY(netoVal));
+                      const ySobranteTop = yGastosTop - sobranteHeight;
+
+                      // If we are in deficit (overspending)
+                      const deficitHeight = Math.max(0, getExpenseY(netoVal) - getExpenseY(gastadoVal));
+                      const yDeficitTop = ySobranteTop - deficitHeight; // beyond netoVal
+
+                      return (
+                        <g
+                          key={s.year}
+                          className="transition-opacity duration-200"
+                          style={{ opacity: hoveredExpIdx !== null && !isCurrentHovered ? 0.45 : 1 }}
+                        >
+                          {/* Year label */}
+                          <text
+                            x={groupCenterX}
+                            y={expenseSvgHeight - expenseMarginBottom + 18}
+                            textAnchor="middle"
+                            className={`font-mono text-[10px] font-bold ${isCurrentHovered ? 'fill-slate-900 font-extrabold' : 'fill-slate-500'}`}
+                          >
+                            Año {s.year}
+                          </text>
+
+                          {/* 1. GASTOS REGISTRADOS BAR */}
+                          {gastosHeight > 0 && (
+                            <rect
+                              x={barX}
+                              y={yGastosTop}
+                              width={expenseBarWidth}
+                              height={gastosHeight}
+                              fill="#fca5a5" // rose-300 / soft light red
+                              className="transition-all hover:brightness-95"
+                            />
+                          )}
+
+                          {/* 2. NÓMINA SOBRANTE BAR (GRIS CLARITO) */}
+                          {sobranteHeight > 0 && (
+                            <rect
+                              x={barX}
+                              y={ySobranteTop}
+                              width={expenseBarWidth}
+                              height={sobranteHeight}
+                              fill="#cbd5e1" // gris clarito
+                              className="transition-all hover:brightness-95"
+                            />
+                          )}
+
+                          {/* 3. DÉFICIT / SOBRECONSUMO BAR */}
+                          {deficitHeight > 0 && (
+                            <rect
+                              x={barX}
+                              y={yDeficitTop}
+                              width={expenseBarWidth}
+                              height={deficitHeight}
+                              fill="#ef4444" // red-500
+                              className="transition-all hover:brightness-95"
+                            />
+                          )}
+
+                          {/* Invisible overlay for hover mouse capture */}
+                          <rect
+                            x={groupCenterX - expenseGroupWidth / 2}
+                            y={expenseMarginTop}
+                            width={expenseGroupWidth}
+                            height={expenseChartHeight}
+                            fill="transparent"
+                            className="cursor-pointer"
+                            onMouseMove={(e) => {
+                              const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                              if (rect) {
+                                setExpTooltipPos({
+                                  x: e.clientX - rect.left + 15,
+                                  y: e.clientY - rect.top - 15,
+                                });
+                              }
+                              setHoveredExpIdx(idx);
+                            }}
+                            onMouseEnter={() => setHoveredExpIdx(idx)}
+                            onMouseLeave={() => {
+                              setHoveredExpIdx(null);
+                              setExpTooltipPos(null);
+                            }}
+                          />
+                        </g>
+                      );
+                    })}
+
+                    {/* Axis Lines */}
+                    <line
+                      x1={expenseMarginLeft}
+                      y1={expenseSvgHeight - expenseMarginBottom}
+                      x2={expenseSvgWidth - expenseMarginRight}
+                      y2={expenseSvgHeight - expenseMarginBottom}
+                      stroke="#94a3b8"
+                      strokeWidth="1.5"
+                    />
+                    <line
+                      x1={expenseMarginLeft}
+                      y1={expenseMarginTop}
+                      x2={expenseMarginLeft}
+                      y2={expenseSvgHeight - expenseMarginBottom}
+                      stroke="#94a3b8"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-2 border-t border-slate-100 pt-2 text-xs" id="dashboard-expenses-savings-legend">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#fca5a5] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Gastos Registrados</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#cbd5e1] shrink-0" />
+            <span className="font-sans font-semibold text-slate-700">Nómina Sobrante (Ahorro)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#ef4444] shrink-0" />
+            <span className="font-sans font-medium text-red-600">Déficit (Consumo excedente)</span>
+          </div>
+        </div>
+
+        {/* Hover Tooltip for Point 2 */}
+        {hoveredExpIdx !== null && expTooltipPos && (() => {
+          const s = summaries[hoveredExpIdx];
+          const netoVal = s.totalNetoNomina ?? Math.max(0, s.salarioBruto - s.retencionIrpf - s.ssEmpleado - s.retencionCapital);
+          const gastadoVal = s.totalGastado ?? 0;
+          const sobranteVal = Math.max(0, netoVal - gastadoVal);
+          const deficitVal = Math.max(0, gastadoVal - netoVal);
+          
+          const pctGastado = netoVal > 0 ? (gastadoVal / netoVal) * 100 : 0;
+          const pctSobrante = netoVal > 0 ? (sobranteVal / netoVal) * 100 : 0;
+          const pctDeficit = netoVal > 0 ? (deficitVal / netoVal) * 100 : 0;
+
+          return (
+            <div
+              className="absolute z-10 bg-slate-900/95 text-white text-xs font-sans rounded-xl p-3 shadow-xl pointer-events-none border border-slate-800/60 backdrop-blur-md space-y-2 min-w-[240px]"
+              style={{ left: expTooltipPos.x, top: expTooltipPos.y }}
+            >
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
+                <span className="font-bold text-sm text-white">Año {s.year}</span>
+                <span className="font-mono text-xxs font-bold text-slate-400">Balance del Año</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {/* Ingresos Netos */}
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-300 font-medium">Nómina Neta Anual:</span>
+                  <span className="font-mono font-bold text-emerald-300">
+                    {netoVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+
+                {/* Gastos Totales */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#fca5a5]" />
+                    <span className="text-slate-300 font-medium">Gastos Totales:</span>
+                  </div>
+                  <span className="font-mono font-bold text-rose-300">
+                    {gastadoVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} ({pctGastado.toFixed(1)}%)
+                  </span>
+                </div>
+
+                {/* Sobrante vs Deficit */}
+                {deficitVal > 0 ? (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
+                      <span className="text-red-300 font-medium">Déficit de nómina:</span>
+                    </div>
+                    <span className="font-mono font-bold text-red-400">
+                      {deficitVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} (+{pctDeficit.toFixed(1)}%)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#cbd5e1]" />
+                      <span className="text-slate-300 font-medium">Nómina Sobrante:</span>
+                    </div>
+                    <span className="font-mono font-bold text-slate-200">
+                      {sobranteVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} ({pctSobrante.toFixed(1)}%)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-800/80 pt-1.5 mt-1 flex justify-between text-xxs text-slate-400 font-medium">
+                <span>Tasa de Ahorro:</span>
+                <span className={`font-mono font-bold ${deficitVal > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {deficitVal > 0 ? '0.00%' : `${pctSobrante.toFixed(2)}%`}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* ====================================================================== */}
+      {/* 3. DISTRIBUCIÓN HISTÓRICA DE GASTOS POR CATEGORÍAS */}
+      {/* ====================================================================== */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4" id="card-dashboard-categories-distribution">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-purple-500" />
+              3. Distribución Histórica de Gastos por Categoría
+            </h3>
+            <p className="font-sans text-xs text-slate-400 font-medium">
+              Evolución detallada de las partidas del presupuesto familiar. Compara importes absolutos o peso relativo sobre ingresos netos.
+            </p>
+          </div>
+
+          {/* Value / Percentage Switcher */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0 self-start sm:self-center">
+            <button
+              type="button"
+              onClick={() => setTableShowPercentage(false)}
+              className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${!tableShowPercentage ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Euros (€)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTableShowPercentage(true)}
+              className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${tableShowPercentage ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <Percent className="w-3.5 h-3.5" />
+              <span>Porcentaje (%)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Categories Comparative Matrix Grid */}
+        <div className="overflow-x-auto border border-slate-200/60 rounded-xl">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <th className="p-3.5 pl-4">Categoría de Gasto</th>
+                {summaries.map((s) => (
+                  <th key={s.year} className="p-3.5 text-right font-mono font-bold text-slate-600 w-32">
+                    Año {s.year}
+                  </th>
+                ))}
+                {summaries.length >= 2 && (
+                  <th className="p-3.5 text-center w-28">Tendencia</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-sans">
+              {(() => {
+                const CLASSIFICATIONS = ['Vivienda', 'Alimentacion', 'Ocio', 'Trabajo', 'Vehiculos', 'Inversion', 'Regalos', 'Ropa', 'Ahorro'];
+                const CATEGORY_LABELS: Record<string, string> = {
+                  Vivienda: '🏠 Vivienda',
+                  Alimentacion: '🛒 Alimentación',
+                  Ocio: '🎉 Ocio / Bienestar',
+                  Trabajo: '💼 Trabajo / Negocios',
+                  Vehiculos: '🚗 Vehículos / Transporte',
+                  Inversion: '📈 Inversión / Ahorro activo',
+                  Regalos: '🎁 Regalos / Donaciones',
+                  Ropa: '👕 Ropa / Calzado',
+                  Ahorro: '🛡️ Ahorro Directo / Reservas',
+                };
+
+                return CLASSIFICATIONS.map((cat) => {
+                  const hasAnyValue = summaries.some((s) => (s.expensesByCategory?.[cat] ?? 0) > 0);
+                  if (!hasAnyValue) return null; // Only show categories with actual records to avoid cluttering
+
+                  return (
+                    <tr key={cat} className="hover:bg-slate-50/50 transition-colors relative">
+                      {/* Name */}
+                      <td className="p-3.5 pl-4 font-semibold text-slate-700 font-sans">
+                        {CATEGORY_LABELS[cat] || cat}
+                      </td>
+
+                      {/* Values per year */}
+                      {summaries.map((s) => {
+                        const yearNeto = s.totalNetoNomina ?? Math.max(0, s.salarioBruto - s.retencionIrpf - s.ssEmpleado - s.retencionCapital);
+                        const value = s.expensesByCategory?.[cat] ?? 0;
+                        const pct = yearNeto > 0 ? (value / yearNeto) * 100 : 0;
+
+                        return (
+                          <td key={s.year} className="p-3.5 text-right font-mono font-bold text-slate-800 relative min-w-[120px]">
+                            {/* Visual background proportion bar */}
+                            <div 
+                              className="absolute right-0.5 top-1 bottom-1 bg-blue-500/5 rounded-l border-r-2 border-blue-500/20 pointer-events-none" 
+                              style={{ width: `${Math.min(95, pct)}%` }}
+                            />
+                            
+                            <span className="relative z-1">
+                              {tableShowPercentage ? (
+                                `${pct.toFixed(1)}%`
+                              ) : (
+                                `${value.toLocaleString('es-ES', { maximumFractionDigits: 0 })} €`
+                              )}
+                            </span>
+                          </td>
+                        );
+                      })}
+
+                      {/* Tendencia (Only if there are at least 2 years of data) */}
+                      {summaries.length >= 2 && (() => {
+                        const prevYearObj = summaries[summaries.length - 2];
+                        const currYearObj = summaries[summaries.length - 1];
+
+                        const prevNeto = prevYearObj.totalNetoNomina ?? Math.max(0, prevYearObj.salarioBruto - prevYearObj.retencionIrpf - prevYearObj.ssEmpleado - prevYearObj.retencionCapital);
+                        const currNeto = currYearObj.totalNetoNomina ?? Math.max(0, currYearObj.salarioBruto - currYearObj.retencionIrpf - currYearObj.ssEmpleado - currYearObj.retencionCapital);
+
+                        const prevVal = prevYearObj.expensesByCategory?.[cat] ?? 0;
+                        const currVal = currYearObj.expensesByCategory?.[cat] ?? 0;
+
+                        const prevPct = prevNeto > 0 ? (prevVal / prevNeto) * 100 : 0;
+                        const currPct = currNeto > 0 ? (currVal / currNeto) * 100 : 0;
+
+                        const changeVal = currVal - prevVal;
+                        const changePct = currPct - prevPct;
+
+                        const isDecreased = tableShowPercentage ? changePct < -0.1 : changeVal < -1;
+                        const isIncreased = tableShowPercentage ? changePct > 0.1 : changeVal > 1;
+
+                        if (isDecreased) {
+                          return (
+                            <td className="p-3.5 text-center shrink-0">
+                              <span className="inline-flex items-center gap-1 font-sans font-bold text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                                <ArrowDownRight className="w-3 h-3" />
+                                <span>-{tableShowPercentage ? `${Math.abs(changePct).toFixed(1)}%` : `${Math.abs(changeVal).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€`}</span>
+                              </span>
+                            </td>
+                          );
+                        } else if (isIncreased) {
+                          return (
+                            <td className="p-3.5 text-center shrink-0">
+                              <span className="inline-flex items-center gap-1 font-sans font-bold text-[10px] text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
+                                <ArrowUpRight className="w-3 h-3" />
+                                <span>+{tableShowPercentage ? `${Math.abs(changePct).toFixed(1)}%` : `${Math.abs(changeVal).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€`}</span>
+                              </span>
+                            </td>
+                          );
+                        } else {
+                          return (
+                            <td className="p-3.5 text-center text-slate-400 font-mono text-[10px] shrink-0">
+                              <span className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5 font-bold">
+                                <ArrowRight className="w-3 h-3" />
+                                <span>Estable</span>
+                              </span>
+                            </td>
+                          );
+                        }
+                      })()}
+                    </tr>
+                  );
+                });
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 };
