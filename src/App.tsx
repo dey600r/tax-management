@@ -103,6 +103,14 @@ export default function App() {
       Ropa: 0,
     };
 
+    const expensesByType: Record<string, number> = {
+      'Gasto Fijo': 0,
+      'Gasto Estimado': 0,
+      'Inversion Fija': 0,
+      'Inversion Estimada': 0,
+      'Ahorro': 0,
+    };
+
     const MONTHS_KEYS = Object.keys(comp.months);
     MONTHS_KEYS.forEach((mId) => {
       const mExpenses = yrState.expenses?.[mId] || [];
@@ -114,6 +122,16 @@ export default function App() {
           expensesByCategory[cat] += importVal;
         } else {
           expensesByCategory[cat] = importVal;
+        }
+
+        let tipo = exp.tipo || 'Gasto Estimado';
+        if (tipo === 'Inversion estimada') {
+          tipo = 'Inversion Estimada';
+        }
+        if (expensesByType[tipo] !== undefined) {
+          expensesByType[tipo] += importVal;
+        } else {
+          expensesByType[tipo] = importVal;
         }
       });
     });
@@ -132,6 +150,7 @@ export default function App() {
       totalNetoNomina,
       totalGastado,
       expensesByCategory,
+      expensesByType,
     };
   });
 

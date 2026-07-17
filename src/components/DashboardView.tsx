@@ -25,6 +25,7 @@ export interface DashboardYearSummary {
   totalNetoNomina?: number;
   totalGastado?: number;
   expensesByCategory?: Record<string, number>;
+  expensesByType?: Record<string, number>;
 }
 
 interface DashboardViewProps {
@@ -518,16 +519,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                       // Stacked Segment heights and offsets
                       const y0 = getExpenseY(0);
 
-                      // If we are in surplus or balance
-                      const gastosHeight = Math.max(0, y0 - getExpenseY(Math.min(gastadoVal, netoVal)));
-                      const yGastosTop = y0 - gastosHeight;
+                      const limitVal = Math.min(gastadoVal, netoVal);
 
-                      const sobranteHeight = Math.max(0, getExpenseY(Math.min(gastadoVal, netoVal)) - getExpenseY(netoVal));
-                      const ySobranteTop = yGastosTop - sobranteHeight;
+                      const types = [
+                        { name: 'Gasto Fijo', color: '#f43f5e' },
+                        { name: 'Gasto Estimado', color: '#fb923c' },
+                        { name: 'Inversion Fija', color: '#6366f1' },
+                        { name: 'Inversion Estimada', color: '#38bdf8' },
+                        { name: 'Ahorro', color: '#10b981' },
+                      ];
+
+                      const totalByTypeSum = types.reduce((acc, t) => acc + (s.expensesByType?.[t.name] || 0), 0);
+
+                      const sobranteHeight = Math.max(0, getExpenseY(limitVal) - getExpenseY(netoVal));
+                      const ySobranteTop = getExpenseY(netoVal);
 
                       // If we are in deficit (overspending)
                       const deficitHeight = Math.max(0, getExpenseY(netoVal) - getExpenseY(gastadoVal));
-                      const yDeficitTop = ySobranteTop - deficitHeight; // beyond netoVal
+                      const yDeficitTop = getExpenseY(gastadoVal);
 
                       return (
                         <g
@@ -545,17 +554,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                             Año {s.year}
                           </text>
 
-                          {/* 1. GASTOS REGISTRADOS BAR */}
-                          {gastosHeight > 0 && (
-                            <rect
-                              x={barX}
-                              y={yGastosTop}
-                              width={expenseBarWidth}
-                              height={gastosHeight}
-                              fill="#fca5a5" // rose-300 / soft light red
-                              className="transition-all hover:brightness-95"
-                            />
-                          )}
+                          {/* 1. SEGMENETED GASTOS REGISTRADOS BARS */}
+                          {(() => {
+                            let accumulatedEuros = 0;
+                            return types.map((t) => {
+                              const realVal = s.expensesByType?.[t.name] || 0;
+                              if (realVal <= 0) return null;
+                              
+                              const nextAccumulatedEuros = accumulatedEuros + realVal;
+                              
+                              const scaledStart = totalByTypeSum > 0 ? (accumulatedEuros / totalByTypeSum) * limitVal : 0;
+                              const scaledEnd = totalByTypeSum > 0 ? (nextAccumulatedEuros / totalByTypeSum) * limitVal : 0;
+                              
+                              const segmentYStart = getExpenseY(scaledStart);
+                              const segmentYEnd = getExpenseY(scaledEnd);
+                              const segmentHeight = Math.max(0, segmentYStart - segmentYEnd);
+                              
+                              accumulatedEuros = nextAccumulatedEuros;
+
+                              if (segmentHeight <= 0) return null;
+
+                              return (
+                                <rect
+                                  key={t.name}
+                                  x={barX}
+                                  y={segmentYEnd}
+                                  width={expenseBarWidth}
+                                  height={segmentHeight}
+                                  fill={t.color}
+                                  className="transition-all hover:brightness-95"
+                                >
+                                  <title>{t.name}: {realVal.toLocaleString('es-ES')}€</title>
+                                </rect>
+                              );
+                            });
+                          })()}
 
                           {/* 2. NÓMINA SOBRANTE BAR (GRIS CLARITO) */}
                           {sobranteHeight > 0 && (
@@ -636,8 +669,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-2 border-t border-slate-100 pt-2 text-xs" id="dashboard-expenses-savings-legend">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#fca5a5] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Gastos Registrados</span>
+            <span className="w-3 h-3 rounded-xs bg-[#f43f5e] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Gasto Fijo</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#fb923c] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Gasto Estimado</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#6366f1] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Inversión Fija</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#38bdf8] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Inversión Estimada</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-[#10b981] shrink-0" />
+            <span className="font-sans font-medium text-slate-600">Ahorro</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-xs bg-[#cbd5e1] shrink-0" />
@@ -645,7 +694,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-xs bg-[#ef4444] shrink-0" />
-            <span className="font-sans font-medium text-red-600">Déficit (Consumo excedente)</span>
+            <span className="font-sans font-medium text-red-600">Déficit</span>
           </div>
         </div>
 
@@ -660,6 +709,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           const pctGastado = netoVal > 0 ? (gastadoVal / netoVal) * 100 : 0;
           const pctSobrante = netoVal > 0 ? (sobranteVal / netoVal) * 100 : 0;
           const pctDeficit = netoVal > 0 ? (deficitVal / netoVal) * 100 : 0;
+
+          const types = [
+            { name: 'Gasto Fijo', color: '#f43f5e' },
+            { name: 'Gasto Estimado', color: '#fb923c' },
+            { name: 'Inversion Fija', color: '#6366f1' },
+            { name: 'Inversion Estimada', color: '#38bdf8' },
+            { name: 'Ahorro', color: '#10b981' },
+          ];
 
           return (
             <div
@@ -681,19 +738,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                 </div>
 
                 {/* Gastos Totales */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 pb-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#fca5a5]" />
-                    <span className="text-slate-300 font-medium">Gastos Totales:</span>
+                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                    <span className="text-slate-300 font-medium font-semibold">Gastos Totales:</span>
                   </div>
-                  <span className="font-mono font-bold text-rose-300">
+                  <span className="font-mono font-bold text-slate-200">
                     {gastadoVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} ({pctGastado.toFixed(1)}%)
                   </span>
                 </div>
 
+                {/* Desglose por Tipo */}
+                {types.map((t) => {
+                  const val = s.expensesByType?.[t.name] || 0;
+                  if (val <= 0) return null;
+                  const pct = netoVal > 0 ? (val / netoVal) * 100 : 0;
+                  return (
+                    <div key={t.name} className="flex items-center justify-between gap-4 pl-2 text-xxs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
+                        <span className="text-slate-400 font-medium">{t.name}:</span>
+                      </div>
+                      <span className="font-mono font-semibold text-slate-300">
+                        {val.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} ({pct.toFixed(1)}%)
+                      </span>
+                    </div>
+                  );
+                })}
+
                 {/* Sobrante vs Deficit */}
                 {deficitVal > 0 ? (
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4 border-t border-slate-800/60 pt-1">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
                       <span className="text-red-300 font-medium">Déficit de nómina:</span>
@@ -703,7 +778,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center justify-between gap-4 border-t border-slate-800/60 pt-1">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#cbd5e1]" />
                       <span className="text-slate-300 font-medium">Nómina Sobrante:</span>
