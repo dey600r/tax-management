@@ -26,6 +26,27 @@ export interface DashboardYearSummary {
   totalGastado?: number;
   expensesByCategory?: Record<string, number>;
   expensesByType?: Record<string, number>;
+  inversiones?: {
+    id: string;
+    banco: string;
+    venta: number;
+    compra: number;
+    interesBruto: number;
+    impuestos: number;
+    impuestosEspana: number;
+    impuestosExtranjero: number;
+    comisiones: number;
+    comisionDeducible: boolean;
+    total: number;
+  }[];
+  totalInversionVenta?: number;
+  totalInversionCompra?: number;
+  totalInversionInteresBruto?: number;
+  totalInversionImpuestos?: number;
+  totalInversionImpuestosEspana?: number;
+  totalInversionImpuestosExtranjero?: number;
+  totalInversionComisiones?: number;
+  totalInversionNeto?: number;
 }
 
 interface DashboardViewProps {
@@ -109,12 +130,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
   }, 0);
   const totalHistoricallyIrpf = summaries.reduce((acc, curr) => acc + curr.retencionIrpf, 0);
   const totalHistoricallySS = summaries.reduce((acc, curr) => acc + curr.ssEmpleado + curr.ssEmpresa, 0);
+  const totalHistoricallyInvestmentNeto = summaries.reduce((acc, curr) => acc + (curr.totalInversionNeto || 0), 0);
 
   return (
     <div className="space-y-3.5" id="dashboard-view-wrapper">
       
       {/* 1. Quick Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="dashboard-stats-row">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="dashboard-stats-row">
         {/* Stat 1: Total neto */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-4">
           <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 border border-emerald-100">
@@ -147,7 +169,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
 
         {/* Stat 3: Total Seguridad Social paid */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-4">
-          <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 border border-amber-100">
+          <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600 border border-slate-150">
             <Shield className="w-5 h-5" />
           </div>
           <div>
@@ -160,7 +182,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           </div>
         </div>
 
-        {/* Stat 4: Last active year info */}
+        {/* Stat 4: Total Investment gains */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-4">
+          <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 border border-amber-100">
+            <Coins className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+              Rendimiento Neto Inv.
+            </span>
+            <span className="text-base font-extrabold font-mono text-slate-800">
+              {totalHistoricallyInvestmentNeto.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        </div>
+
+        {/* Stat 5: Last active year info */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-4">
           <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 border border-slate-200">
             <Calendar className="w-5 h-5" />
@@ -443,7 +480,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
         <div className="mb-2.5 space-y-1">
           <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
             <Coins className="w-4 h-4 text-rose-500" />
-            2. Relación de Gastos y Ahorro Interanual
+            Relación de Gastos y Ahorro Interanual
           </h3>
           <p className="font-sans text-xs text-slate-400 font-medium">
             Comparativa entre la nómina neta percibida (ingresos), los gastos totales registrados y el ahorro o nómina sobrante (gris clarito)
@@ -809,7 +846,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           <div className="space-y-1">
             <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
               <PieChart className="w-4 h-4 text-purple-500" />
-              3. Distribución Histórica de Gastos por Categoría
+              Distribución Histórica de Gastos por Categoría
             </h3>
             <p className="font-sans text-xs text-slate-400 font-medium">
               Evolución detallada de las partidas del presupuesto familiar. Compara importes absolutos o peso relativo sobre ingresos netos.
@@ -960,6 +997,270 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ====================================================================== */}
+      {/* 4. RENDIMIENTO DE INVERSIONES (BASE DEL AHORRO) */}
+      {/* ====================================================================== */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-5" id="card-dashboard-investments-performance">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="space-y-1">
+            <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+              <Coins className="w-4 h-4 text-amber-500" />
+              Rendimiento de Inversiones (Base del Ahorro)
+            </h3>
+            <p className="font-sans text-xs text-slate-400 font-medium">
+              Análisis histórico acumulado de rendimientos brutos, retenciones fiscales, comisiones de gestión y beneficio neto real de tus inversiones.
+            </p>
+          </div>
+        </div>
+
+        {(() => {
+          const totalInversionInteresBrutoAll = summaries.reduce((acc, curr) => acc + (curr.totalInversionInteresBruto || 0), 0);
+          const totalInversionImpuestosAll = summaries.reduce((acc, curr) => acc + (curr.totalInversionImpuestos || 0), 0);
+          const totalInversionComisionesAll = summaries.reduce((acc, curr) => acc + (curr.totalInversionComisiones || 0), 0);
+          const totalInversionNetoAll = summaries.reduce((acc, curr) => acc + (curr.totalInversionNeto || 0), 0);
+
+          return (
+            <div className="space-y-5">
+              {/* Bento Grid Metrics (Historical Totals) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Metric 1: Rendimiento Bruto */}
+                <div className="bg-amber-50/40 border border-amber-100/60 rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                    Interés / Rendimiento Bruto Histórico
+                  </span>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-xl font-extrabold font-mono text-amber-700">
+                      {totalInversionInteresBrutoAll.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-sm">
+                      Gross
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metric 2: Impuestos Retenidos */}
+                <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wide">
+                    Retenciones Fiscales Históricas (19%)
+                  </span>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-xl font-extrabold font-mono text-rose-700">
+                      {totalInversionImpuestosAll.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-1.5 py-0.5 rounded-sm">
+                      IRPF
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metric 3: Comisiones Totales */}
+                <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                    Comisiones de Operación Históricas
+                  </span>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-xl font-extrabold font-mono text-slate-600">
+                      {totalInversionComisionesAll.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    <span className="text-[10px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.5 rounded-sm">
+                      Fees
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metric 4: Rendimiento Neto */}
+                <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">
+                    Rendimiento Neto Real Histórico
+                  </span>
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <span className="text-xl font-extrabold font-mono text-emerald-700">
+                      {totalInversionNetoAll.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-sm">
+                      Net Gain
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Historical Comparison Chart */}
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-3xs flex flex-col justify-between max-w-3xl mx-auto w-full">
+                <div className="border-b border-slate-100 pb-3 mb-4 text-center">
+                  <h4 className="font-sans font-bold text-slate-700 text-xs uppercase tracking-wider">
+                    Histórico de Rendimiento de Inversiones
+                  </h4>
+                </div>
+
+                {(() => {
+                  const maxVal = Math.max(...summaries.map(s => (s.totalInversionNeto || 0) + (s.totalInversionComisiones || 0) + (s.totalInversionImpuestos || 0)), 100);
+                  const yMaxGain = maxVal * 1.15;
+
+                  // Chart dimensions - strictly matching the main chart and expense chart
+                  const invSvgWidth = 600;
+                  const invSvgHeight = 320;
+                  const invMarginTop = 30;
+                  const invMarginBottom = 50;
+                  const invMarginLeft = 60;
+                  const invMarginRight = 30;
+
+                  const invChartWidth = invSvgWidth - invMarginLeft - invMarginRight;
+                  const invChartHeight = invSvgHeight - invMarginTop - invMarginBottom;
+
+                  const invGroupWidth = invChartWidth / numYears;
+                  const invBarWidth = 36;
+
+                  const ticksCount = 5;
+                  const ticksList = Array.from({ length: ticksCount }, (_, i) => (yMaxGain / (ticksCount - 1)) * i);
+
+                  const getInvY = (val: number) => {
+                    return invSvgHeight - invMarginBottom - (val / yMaxGain) * invChartHeight;
+                  };
+
+                  return (
+                    <div className="w-full overflow-x-auto">
+                      <div className="min-w-[550px] max-w-[800px] mx-auto relative">
+                        <svg viewBox={`0 0 ${invSvgWidth} ${invSvgHeight}`} width="100%" className="overflow-visible">
+                          {/* Horizontal gridlines */}
+                          {ticksList.map((tick, i) => {
+                            const y = getInvY(tick);
+                            return (
+                              <g key={i} className="opacity-40">
+                                <line
+                                  x1={invMarginLeft}
+                                  y1={y}
+                                  x2={invSvgWidth - invMarginRight}
+                                  y2={y}
+                                  stroke="#cbd5e1"
+                                  strokeWidth="1"
+                                  strokeDasharray="4 4"
+                                />
+                                <text
+                                  x={invMarginLeft - 8}
+                                  y={y + 4}
+                                  textAnchor="end"
+                                  className="font-mono text-[9px] fill-slate-400 font-semibold"
+                                >
+                                  {Math.round(tick).toLocaleString('es-ES')}€
+                                </text>
+                              </g>
+                            );
+                          })}
+
+                          {/* Stacked Bars representing each year */}
+                          {summaries.map((s, idx) => {
+                            const groupCenterX = invMarginLeft + idx * invGroupWidth + invGroupWidth / 2;
+                            const netVal = s.totalInversionNeto || 0;
+                            const comVal = s.totalInversionComisiones || 0;
+                            const impVal = s.totalInversionImpuestos || 0;
+
+                            const barX = groupCenterX - invBarWidth / 2;
+
+                            // Heights and offsets
+                            const yNetEnd = getInvY(netVal);
+                            const heightNet = Math.max(0, getInvY(0) - yNetEnd);
+
+                            const yComEnd = getInvY(netVal + comVal);
+                            const heightCom = Math.max(0, yNetEnd - yComEnd);
+
+                            const yImpEnd = getInvY(netVal + comVal + impVal);
+                            const heightImp = Math.max(0, yComEnd - yImpEnd);
+
+                            return (
+                              <g key={s.year}>
+                                {/* Year label */}
+                                <text
+                                  x={groupCenterX}
+                                  y={invSvgHeight - invMarginBottom + 18}
+                                  textAnchor="middle"
+                                  className="font-mono text-[10px] font-bold fill-slate-500"
+                                >
+                                  Año {s.year}
+                                </text>
+
+                                {/* Segment 1: Neto (Emerald) */}
+                                {heightNet > 0 && (
+                                  <rect
+                                    x={barX}
+                                    y={yNetEnd}
+                                    width={invBarWidth}
+                                    height={heightNet}
+                                    fill="#10b981"
+                                    className="transition-all hover:brightness-95"
+                                  />
+                                )}
+
+                                {/* Segment 2: Comisiones (Slate) */}
+                                {heightCom > 0 && (
+                                  <rect
+                                    x={barX}
+                                    y={yComEnd}
+                                    width={invBarWidth}
+                                    height={heightCom}
+                                    fill="#94a3b8"
+                                    className="transition-all hover:brightness-95"
+                                  />
+                                )}
+
+                                {/* Segment 3: Impuestos (Rose) */}
+                                {heightImp > 0 && (
+                                  <rect
+                                    x={barX}
+                                    y={yImpEnd}
+                                    width={invBarWidth}
+                                    height={heightImp}
+                                    fill="#f43f5e"
+                                    className="transition-all hover:brightness-95"
+                                  />
+                                )}
+                              </g>
+                            );
+                          })}
+
+                          {/* Axis lines */}
+                          <line
+                            x1={invMarginLeft}
+                            y1={invSvgHeight - invMarginBottom}
+                            x2={invSvgWidth - invMarginRight}
+                            y2={invSvgHeight - invMarginBottom}
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                          />
+                          <line
+                            x1={invMarginLeft}
+                            y1={invMarginTop}
+                            x2={invMarginLeft}
+                            y2={invSvgHeight - invMarginBottom}
+                            stroke="#94a3b8"
+                            strokeWidth="1.5"
+                          />
+                        </svg>
+
+                        {/* Chart Legend */}
+                        <div className="flex justify-center gap-4 text-[10px] font-sans font-bold text-slate-500 mt-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded bg-emerald-500" />
+                            <span>Rend. Neto</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded bg-slate-400" />
+                            <span>Comisiones</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded bg-rose-500" />
+                            <span>Impuestos</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
     </div>

@@ -140,6 +140,32 @@ export default function App() {
       return sum + (comp.months[mId as MonthId]?.neto || 0);
     }, 0);
 
+    // Calculate annual investment gains (Base de Ahorro e Inversiones)
+    const inversionesList = yrState.inversiones || [];
+    const computedInversiones = inversionesList.map((row) => {
+      const hasVentaYCompra = row.venta !== 0 && row.compra !== 0;
+      const interesBruto = hasVentaYCompra ? Math.round((row.venta - row.compra) * 100) / 100 : row.interesBruto;
+      const impuestos = interesBruto * 0.19;
+      const comisionesNoDeducibles = row.comisionDeducible ? 0 : row.comisiones;
+      const total = interesBruto - impuestos - comisionesNoDeducibles;
+      return {
+        ...row,
+        interesBruto,
+        impuestos,
+        comisionesNoDeducibles,
+        total,
+      };
+    });
+
+    const totalInversionVenta = computedInversiones.reduce((sum, r) => sum + r.venta, 0);
+    const totalInversionCompra = computedInversiones.reduce((sum, r) => sum + r.compra, 0);
+    const totalInversionInteresBruto = computedInversiones.reduce((sum, r) => sum + r.interesBruto, 0);
+    const totalInversionImpuestos = computedInversiones.reduce((sum, r) => sum + r.impuestos, 0);
+    const totalInversionImpuestosEspana = computedInversiones.reduce((sum, r) => sum + r.impuestosEspana, 0);
+    const totalInversionImpuestosExtranjero = computedInversiones.reduce((sum, r) => sum + r.impuestosExtranjero, 0);
+    const totalInversionComisiones = computedInversiones.reduce((sum, r) => sum + r.comisiones, 0);
+    const totalInversionNeto = computedInversiones.reduce((sum, r) => sum + r.total, 0);
+
     return {
       year: yr,
       salarioBruto: comp.annualSummary.salarioBruto,
@@ -151,6 +177,15 @@ export default function App() {
       totalGastado,
       expensesByCategory,
       expensesByType,
+      inversiones: computedInversiones,
+      totalInversionVenta,
+      totalInversionCompra,
+      totalInversionInteresBruto,
+      totalInversionImpuestos,
+      totalInversionImpuestosEspana,
+      totalInversionImpuestosExtranjero,
+      totalInversionComisiones,
+      totalInversionNeto,
     };
   });
 
