@@ -35,6 +35,8 @@ interface SavingsExpensesViewProps {
   onUpdateTransfers: (transfers: Record<string, TransferRow[]>) => void;
   onUpdateExpenses: (expenses: Record<string, ExpenseRow[]>) => void;
   showToast: (message: string, type: 'success' | 'error') => void;
+  settings: any;
+  onOpenSettings?: () => void;
 }
 
 const CALENDAR_MONTHS: { id: MonthId; label: string }[] = [
@@ -62,52 +64,54 @@ const TIPO_OPTIONS = [
   'Ahorro',
 ] as const;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  'Gasto Fijo': '#f43f5e',       // Rose 500
-  'Gasto Estimado': '#fb923c',   // Orange 400
-  'Inversion Fija': '#6366f1',   // Indigo 500
-  'Inversion Estimada': '#38bdf8', // Sky 400
-  'Ahorro': '#10b981',           // Emerald 500
+const DYNAMIC_PALETTE = [
+  '#3b82f6', // Blue 500
+  '#f97316', // Orange 500
+  '#ec4899', // Pink 500
+  '#6366f1', // Indigo 500
+  '#8b5cf6', // Violet 500
+  '#14b8a6', // Teal 500
+  '#eab308', // Yellow 500
+  '#10b981', // Emerald 500
+  '#f43f5e', // Rose 500
+  '#06b6d4', // Cyan 500
+  '#a855f7', // Purple 500
+  '#16a34a', // Green 600
+  '#ea580c', // Orange 600
+  '#2563eb', // Blue 600
+];
+
+const stringToColor = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  return DYNAMIC_PALETTE[index];
 };
 
 const getTipoColor = (tipo: string): string => {
-  if (tipo === 'Inversion estimada' || tipo === 'Inversion Estimada') {
-    return CATEGORY_COLORS['Inversion Estimada'];
-  }
-  return CATEGORY_COLORS[tipo] || '#94a3b8';
+  const norm = (tipo || '').toLowerCase().trim();
+  if (norm === 'gasto fijo') return '#f43f5e';
+  if (norm === 'gasto estimado') return '#fb923c';
+  if (norm === 'inversion fija' || norm === 'inversión fija') return '#6366f1';
+  if (norm === 'inversion estimada' || norm === 'inversión estimada') return '#38bdf8';
+  if (norm === 'ahorro') return '#10b981';
+  return stringToColor(tipo);
 };
 
-// MASTER OPTIONS FOR EXPENSES
-const EXPENSE_TIPO_OPTIONS = [
-  'Gasto Fijo',
-  'Gasto Estimado',
-  'Inversion Fija',
-  'Inversion estimada',
-  'Ahorro',
-] as const;
-
-const EXPENSE_CLASIFICACION_OPTIONS = [
-  'Vivienda',
-  'Alimentacion',
-  'Ocio',
-  'Trabajo',
-  'Vehiculos',
-  'Inversion',
-  'Regalos',
-  'Ahorro',
-  'Ropa',
-] as const;
-
-const EXPENSE_CLASIFICACION_COLORS: Record<string, string> = {
-  'Vivienda': '#3b82f6',     // Blue 500
-  'Alimentacion': '#f97316', // Orange 500
-  'Ocio': '#ec4899',         // Pink 500
-  'Trabajo': '#6366f1',      // Indigo 500
-  'Vehiculos': '#8b5cf6',    // Violet 500
-  'Inversion': '#14b8a6',    // Teal 500
-  'Regalos': '#eab308',      // Yellow 500
-  'Ahorro': '#10b981',       // Emerald 500
-  'Ropa': '#f43f5e',         // Rose 500
+const getClasificacionColor = (clasificacion: string): string => {
+  const norm = (clasificacion || '').toLowerCase().trim();
+  if (norm === 'vivienda') return '#3b82f6';
+  if (norm === 'alimentacion' || norm === 'alimentación') return '#f97316';
+  if (norm === 'ocio') return '#ec4899';
+  if (norm === 'trabajo') return '#6366f1';
+  if (norm === 'vehiculos' || norm === 'vehículos') return '#8b5cf6';
+  if (norm === 'inversion' || norm === 'inversión') return '#14b8a6';
+  if (norm === 'regalos') return '#eab308';
+  if (norm === 'ahorro') return '#10b981';
+  if (norm === 'ropa') return '#f43f5e';
+  return stringToColor(clasificacion);
 };
 
 export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
@@ -116,8 +120,26 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   onUpdateTransfers,
   onUpdateExpenses,
   showToast,
+  settings,
+  onOpenSettings,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<MonthId>('enero');
+
+  // Active month data
+  const monthTransfers = yearState.transfers?.[selectedMonth] || [];
+  const monthExpenses = yearState.expenses?.[selectedMonth] || [];
+  const netoNomina = computedYear.months[selectedMonth]?.neto || 0;
+
+  const dynamicTipos = Array.from(new Set([
+    ...(settings?.tipos?.map((t: any) => t.name) || []),
+    ...monthTransfers.map((t) => t.tipo),
+    ...monthExpenses.map((e) => e.tipo),
+  ])).filter((val): val is string => typeof val === 'string' && val.trim() !== '');
+
+  const dynamicClasificaciones = Array.from(new Set([
+    ...(settings?.clasificaciones?.map((c: any) => c.name) || []),
+    ...monthExpenses.map((e) => e.clasificacion),
+  ])).filter((val): val is string => typeof val === 'string' && val.trim() !== '');
   
   // Collapsible toggle states
   const [isTransfersOpen, setIsTransfersOpen] = useState(false);
@@ -134,10 +156,6 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const [expenseTypeTooltipPos, setExpenseTypeTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const [annualTooltipPos, setAnnualTooltipPos] = useState<{ x: number; y: number } | null>(null);
 
-  // Active month data
-  const monthTransfers = yearState.transfers?.[selectedMonth] || [];
-  const monthExpenses = yearState.expenses?.[selectedMonth] || [];
-  const netoNomina = computedYear.months[selectedMonth]?.neto || 0;
 
   // -------------------------------------------------------------
   // CALCULATIONS: TRANSFERS
@@ -150,7 +168,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   }, 0);
 
   // Summary Transfers grouped by TIPO
-  const transfersSummaryRows = TIPO_OPTIONS.map((tipo) => {
+  const transfersSummaryRows = dynamicTipos.map((tipo) => {
     const items = monthTransfers.filter((r) => r.tipo === tipo);
     const sumaEuros = items.reduce((sum, r) => sum + r.importe, 0);
     const sumaPct = netoNomina > 0 ? (sumaEuros / netoNomina) * 100 : 0;
@@ -170,6 +188,17 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const transfersSummaryTotalSumaPct = netoNomina > 0 ? (transfersSummaryTotalSumaEuros / netoNomina) * 100 : 0;
   const transfersSummaryTotalRestoEuros = netoNomina - transfersSummaryTotalSumaEuros;
   const transfersSummaryTotalRestoPct = Math.max(0, 100 - transfersSummaryTotalSumaPct);
+
+  const transfersChartSegments = transfersSummaryRows.map((row) => {
+    const value = Math.max(0, row.sumaEuros);
+    const pct = transfersSummaryTotalSumaEuros > 0 ? (value / transfersSummaryTotalSumaEuros) * 100 : 0;
+    return {
+      label: row.tipo,
+      value,
+      pct,
+      color: getTipoColor(row.tipo),
+    };
+  });
 
   // -------------------------------------------------------------
   // CALCULATIONS: EXPENSES
@@ -196,7 +225,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   }, 0);
 
   // Summary Expenses grouped by CLASIFICACION (Category)
-  const expensesSummaryRows = EXPENSE_CLASIFICACION_OPTIONS.map((clasificacion) => {
+  const expensesSummaryRows = dynamicClasificaciones.map((clasificacion) => {
     const items = monthExpenses.filter((r) => r.clasificacion === clasificacion);
     const sumaEuros = items.reduce((sum, r) => sum + r.importe, 0);
     const sumaPct = netoNomina > 0 ? (sumaEuros / netoNomina) * 100 : 0;
@@ -217,8 +246,19 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const expensesSummaryTotalRestoEuros = netoNomina - expensesSummaryTotalSumaEuros;
   const expensesSummaryTotalRestoPct = Math.max(0, 100 - expensesSummaryTotalSumaPct);
 
+  const expensesChartSegments = expensesSummaryRows.map((row) => {
+    const value = Math.max(0, row.sumaEuros);
+    const pct = expensesSummaryTotalSumaEuros > 0 ? (value / expensesSummaryTotalSumaEuros) * 100 : 0;
+    return {
+      label: row.clasificacion,
+      value,
+      pct,
+      color: getClasificacionColor(row.clasificacion),
+    };
+  });
+
   // Summary Expenses grouped by TIPO (Expense Type)
-  const expensesTypeSummaryRows = EXPENSE_TIPO_OPTIONS.map((tipo) => {
+  const expensesTypeSummaryRows = dynamicTipos.map((tipo) => {
     const items = monthExpenses.filter((r) => r.tipo === tipo);
     const sumaEuros = items.reduce((sum, r) => sum + r.importe, 0);
     const sumaPct = netoNomina > 0 ? (sumaEuros / netoNomina) * 100 : 0;
@@ -239,10 +279,21 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const expensesTypeSummaryTotalRestoEuros = netoNomina - expensesTypeSummaryTotalSumaEuros;
   const expensesTypeSummaryTotalRestoPct = Math.max(0, 100 - expensesTypeSummaryTotalSumaPct);
 
+  const expensesTypeChartSegments = expensesTypeSummaryRows.map((row) => {
+    const value = Math.max(0, row.sumaEuros);
+    const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
+    return {
+      label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
+      value,
+      pct,
+      color: getTipoColor(row.tipo),
+    };
+  });
+
   // -------------------------------------------------------------
   // CALCULATIONS: ANNUAL EXPENSES BY CLASIFICACION (Category)
   // -------------------------------------------------------------
-  const annualExpensesRows = EXPENSE_CLASIFICACION_OPTIONS.map((clasificacion) => {
+  const annualExpensesRows = dynamicClasificaciones.map((clasificacion) => {
     let sumaEuros = 0;
     CALENDAR_MONTHS.forEach((m) => {
       const mExpenses = yearState.expenses?.[m.id] || [];
@@ -299,7 +350,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
       label: row.clasificacion as string,
       value: row.sumaEuros,
       pct: row.sumaPct,
-      color: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] || '#94a3b8',
+      color: getClasificacionColor(row.clasificacion),
     }))
   );
 
@@ -368,12 +419,13 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   };
 
   const handleAddTransferRow = () => {
+    const defaultTipo = dynamicTipos[0] || 'Gasto Fijo';
     const newRow: TransferRow = {
       id: 'trans_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       cuentaOrigen: '',
       cuentaDestino: '',
       concepto: '',
-      tipo: 'Gasto Fijo',
+      tipo: defaultTipo as any,
       importe: 0,
     };
     onUpdateTransfers({
@@ -440,12 +492,14 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   };
 
   const handleAddExpenseRow = () => {
+    const defaultTipo = dynamicTipos[0] || 'Gasto Fijo';
+    const defaultClasificacion = dynamicClasificaciones[0] || 'Vivienda';
     const newRow: ExpenseRow = {
       id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       cuentaOrigen: '',
       concepto: '',
-      tipo: 'Gasto Fijo',
-      clasificacion: 'Vivienda',
+      tipo: defaultTipo as any,
+      clasificacion: defaultClasificacion as any,
       importe: 0,
       capReaccion: null,
     };
@@ -994,7 +1048,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                               onChange={(e) => handleUpdateTransferField(index, 'tipo', e.target.value as any)}
                               className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 text-slate-800 font-bold transition-all font-sans cursor-pointer"
                             >
-                              {TIPO_OPTIONS.map((opt) => (
+                              {dynamicTipos.map((opt) => (
                                 <option key={opt} value={opt}>
                                   {opt}
                                 </option>
@@ -1078,26 +1132,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {transfersSummaryRows.map((row) => (
-                          <tr key={row.tipo} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[row.tipo] }} />
-                              <span>{row.tipo}</span>
-                            </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-800">
-                              {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                            </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-600">
-                              {row.sumaPct.toFixed(2)}%
-                            </td>
-                            <td className="p-3 text-right font-mono font-medium text-slate-500">
-                              {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                            </td>
-                            <td className="p-3 text-right font-mono font-medium text-slate-500">
-                              {row.restoPct.toFixed(2)}%
-                            </td>
-                          </tr>
-                        ))}
+                        {transfersSummaryRows.map((row) => {
+                          const limit = (() => {
+                            if (!settings?.tipos) return undefined;
+                            const norm = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                            const targetNorm = norm(row.tipo);
+                            return settings.tipos.find((t: any) => norm(t.name) === targetNorm)?.limitPct;
+                          })();
+
+                          let pctColor = "text-slate-600";
+                          let titleAttr = undefined;
+
+                          if (limit !== undefined && limit > 0) {
+                            const warningLimit = limit * 0.8;
+                            if (row.sumaPct > limit) {
+                              pctColor = "text-rose-600 font-extrabold";
+                              titleAttr = `Supera el límite de ${limit}% para ${row.tipo}`;
+                            } else if (row.sumaPct >= warningLimit) {
+                              pctColor = "text-amber-500 font-extrabold";
+                              titleAttr = `Cerca del límite de ${limit}% (Margen < 20% del límite) para ${row.tipo}`;
+                            } else {
+                              pctColor = "text-emerald-600 font-semibold";
+                              titleAttr = `Dentro del límite de ${limit}% para ${row.tipo}`;
+                            }
+                          }
+
+                          return (
+                            <tr key={row.tipo} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
+                                <span>{row.tipo}</span>
+                              </td>
+                              <td className="p-3 text-right font-mono font-bold text-slate-800">
+                                {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className={`p-3 text-right font-mono ${pctColor}`} title={titleAttr}>
+                                <div className="font-bold">{row.sumaPct.toFixed(2)}%</div>
+                                {limit !== undefined && limit > 0 && (
+                                  <div className="text-[9px] text-slate-400 font-sans font-medium">
+                                    límite: {limit}%
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoPct.toFixed(2)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
@@ -1142,18 +1227,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                           <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
                           {(() => {
                             let accumulatedPercentage = 0;
-                            const segments = transfersSummaryRows.map((row) => {
-                              const value = Math.max(0, row.sumaEuros);
-                              const pct = transfersSummaryTotalSumaEuros > 0 ? (value / transfersSummaryTotalSumaEuros) * 100 : 0;
-                              return {
-                                label: row.tipo,
-                                value,
-                                pct,
-                                color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
-                              };
-                            });
-
-                            return segments.map((seg, idx) => {
+                            return transfersChartSegments.map((seg, idx) => {
                               if (seg.value <= 0) return null;
                               const segmentPercentage = seg.value / transfersSummaryTotalSumaEuros;
                               const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
@@ -1190,19 +1264,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                         {/* Center Text */}
                         <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
                           {(() => {
-                            const segments = transfersSummaryRows.map((row) => {
-                              const value = Math.max(0, row.sumaEuros);
-                              const pct = transfersSummaryTotalSumaEuros > 0 ? (value / transfersSummaryTotalSumaEuros) * 100 : 0;
-                              return {
-                                label: row.tipo,
-                                value,
-                                pct,
-                                color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
-                              };
-                            });
-
-                            if (hoveredTransferIdx !== null && segments[hoveredTransferIdx]) {
-                              const activeSeg = segments[hoveredTransferIdx];
+                            if (hoveredTransferIdx !== null && transfersChartSegments[hoveredTransferIdx]) {
+                              const activeSeg = transfersChartSegments[hoveredTransferIdx];
                               return (
                                 <>
                                   <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 truncate" style={{ color: activeSeg.color }}>
@@ -1246,7 +1309,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                               onMouseEnter={() => setHoveredTransferIdx(idx)}
                               onMouseLeave={() => setHoveredTransferIdx(null)}
                             >
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[row.tipo] }} />
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
                               <span className={`font-sans font-medium text-slate-600 truncate transition-colors ${isHovered ? 'text-slate-900 font-bold' : ''}`}>
                                 {row.tipo}
                               </span>
@@ -1257,17 +1320,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
                       {/* Floating Tooltip */}
                       {hoveredTransferIdx !== null && transferTooltipPos && (() => {
-                        const segments = transfersSummaryRows.map((row) => {
-                          const value = Math.max(0, row.sumaEuros);
-                          const pct = transfersSummaryTotalSumaEuros > 0 ? (value / transfersSummaryTotalSumaEuros) * 100 : 0;
-                          return {
-                            label: row.tipo,
-                            value,
-                            pct,
-                            color: CATEGORY_COLORS[row.tipo] || '#94a3b8',
-                          };
-                        });
-                        const seg = segments[hoveredTransferIdx];
+                        const seg = transfersChartSegments[hoveredTransferIdx];
                         if (!seg) return null;
                         return (
                           <div
@@ -1428,7 +1481,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                               onChange={(e) => handleUpdateExpenseField(index, 'tipo', e.target.value as any)}
                               className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 text-slate-800 font-bold transition-all font-sans cursor-pointer"
                             >
-                              {EXPENSE_TIPO_OPTIONS.map((opt) => (
+                              {dynamicTipos.map((opt) => (
                                 <option key={opt} value={opt}>
                                   {opt}
                                 </option>
@@ -1443,7 +1496,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                               onChange={(e) => handleUpdateExpenseField(index, 'clasificacion', e.target.value as any)}
                               className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2 py-1.5 text-slate-800 font-bold transition-all font-sans cursor-pointer"
                             >
-                              {EXPENSE_CLASIFICACION_OPTIONS.map((opt) => (
+                              {dynamicClasificaciones.map((opt) => (
                                 <option key={opt} value={opt}>
                                   {opt}
                                 </option>
@@ -1561,26 +1614,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {expensesSummaryRows.map((row) => (
-                          <tr key={row.clasificacion} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] }} />
-                              <span>{row.clasificacion}</span>
-                            </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-800">
-                              {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                            </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-600">
-                              {row.sumaPct.toFixed(2)}%
-                            </td>
-                            <td className="p-3 text-right font-mono font-medium text-slate-500">
-                              {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                            </td>
-                            <td className="p-3 text-right font-mono font-medium text-slate-500">
-                              {row.restoPct.toFixed(2)}%
-                            </td>
-                          </tr>
-                        ))}
+                        {expensesSummaryRows.map((row) => {
+                          const limit = (() => {
+                            if (!settings?.clasificaciones) return undefined;
+                            const norm = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                            const targetNorm = norm(row.clasificacion);
+                            return settings.clasificaciones.find((c: any) => norm(c.name) === targetNorm)?.limitPct;
+                          })();
+
+                          let pctColor = "text-slate-600";
+                          let titleAttr = undefined;
+
+                          if (limit !== undefined && limit > 0) {
+                            const warningLimit = limit * 0.8;
+                            if (row.sumaPct > limit) {
+                              pctColor = "text-rose-600 font-extrabold";
+                              titleAttr = `Supera el límite de ${limit}% para ${row.clasificacion}`;
+                            } else if (row.sumaPct >= warningLimit) {
+                              pctColor = "text-amber-500 font-extrabold";
+                              titleAttr = `Cerca del límite de ${limit}% (Margen < 20% del límite) para ${row.clasificacion}`;
+                            } else {
+                              pctColor = "text-emerald-600 font-semibold";
+                              titleAttr = `Dentro del límite de ${limit}% para ${row.clasificacion}`;
+                            }
+                          }
+
+                          return (
+                            <tr key={row.clasificacion} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getClasificacionColor(row.clasificacion) }} />
+                                <span>{row.clasificacion}</span>
+                              </td>
+                              <td className="p-3 text-right font-mono font-bold text-slate-800">
+                                {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className={`p-3 text-right font-mono ${pctColor}`} title={titleAttr}>
+                                <div className="font-bold">{row.sumaPct.toFixed(2)}%</div>
+                                {limit !== undefined && limit > 0 && (
+                                  <div className="text-[9px] text-slate-400 font-sans font-medium">
+                                    límite: {limit}%
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                              </td>
+                              <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                {row.restoPct.toFixed(2)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
@@ -1625,18 +1709,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                           <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
                           {(() => {
                             let accumulatedPercentage = 0;
-                            const segments = expensesSummaryRows.map((row) => {
-                              const value = Math.max(0, row.sumaEuros);
-                              const pct = expensesSummaryTotalSumaEuros > 0 ? (value / expensesSummaryTotalSumaEuros) * 100 : 0;
-                              return {
-                                label: row.clasificacion,
-                                value,
-                                pct,
-                                color: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] || '#94a3b8',
-                              };
-                            });
-
-                            return segments.map((seg, idx) => {
+                            return expensesChartSegments.map((seg, idx) => {
                               if (seg.value <= 0) return null;
                               const segmentPercentage = seg.value / expensesSummaryTotalSumaEuros;
                               const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
@@ -1673,19 +1746,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                         {/* Center Text */}
                         <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
                           {(() => {
-                            const segments = expensesSummaryRows.map((row) => {
-                              const value = Math.max(0, row.sumaEuros);
-                              const pct = expensesSummaryTotalSumaEuros > 0 ? (value / expensesSummaryTotalSumaEuros) * 100 : 0;
-                              return {
-                                label: row.clasificacion,
-                                value,
-                                pct,
-                                color: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] || '#94a3b8',
-                              };
-                            });
-
-                            if (hoveredExpenseIdx !== null && segments[hoveredExpenseIdx]) {
-                              const activeSeg = segments[hoveredExpenseIdx];
+                            if (hoveredExpenseIdx !== null && expensesChartSegments[hoveredExpenseIdx]) {
+                              const activeSeg = expensesChartSegments[hoveredExpenseIdx];
                               return (
                                 <>
                                   <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 truncate" style={{ color: activeSeg.color }}>
@@ -1729,7 +1791,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                               onMouseEnter={() => setHoveredExpenseIdx(idx)}
                               onMouseLeave={() => setHoveredExpenseIdx(null)}
                             >
-                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] }} />
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getClasificacionColor(row.clasificacion) }} />
                               <span className={`font-sans font-medium text-slate-600 truncate transition-colors ${isHovered ? 'text-slate-900 font-bold' : ''}`}>
                                 {row.clasificacion}
                               </span>
@@ -1740,17 +1802,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
                       {/* Floating Tooltip */}
                       {hoveredExpenseIdx !== null && expenseTooltipPos && (() => {
-                        const segments = expensesSummaryRows.map((row) => {
-                          const value = Math.max(0, row.sumaEuros);
-                          const pct = expensesSummaryTotalSumaEuros > 0 ? (value / expensesSummaryTotalSumaEuros) * 100 : 0;
-                          return {
-                            label: row.clasificacion,
-                            value,
-                            pct,
-                            color: EXPENSE_CLASIFICACION_COLORS[row.clasificacion] || '#94a3b8',
-                          };
-                        });
-                        const seg = segments[hoveredExpenseIdx];
+                        const seg = expensesChartSegments[hoveredExpenseIdx];
                         if (!seg) return null;
                         return (
                           <div
@@ -1793,26 +1845,57 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {expensesTypeSummaryRows.map((row) => (
-                            <tr key={row.tipo} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
-                                <span>{TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}</span>
-                              </td>
-                              <td className="p-3 text-right font-mono font-bold text-slate-800">
-                                {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                              </td>
-                              <td className="p-3 text-right font-mono font-bold text-slate-600">
-                                {row.sumaPct.toFixed(2)}%
-                              </td>
-                              <td className="p-3 text-right font-mono font-medium text-slate-500">
-                                {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                              </td>
-                              <td className="p-3 text-right font-mono font-medium text-slate-500">
-                                {row.restoPct.toFixed(2)}%
-                              </td>
-                            </tr>
-                          ))}
+                          {expensesTypeSummaryRows.map((row) => {
+                            const limit = (() => {
+                              if (!settings?.tipos) return undefined;
+                              const norm = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                              const targetNorm = norm(row.tipo);
+                              return settings.tipos.find((t: any) => norm(t.name) === targetNorm)?.limitPct;
+                            })();
+
+                            let pctColor = "text-slate-600";
+                            let titleAttr = undefined;
+
+                            if (limit !== undefined && limit > 0) {
+                              const warningLimit = limit * 0.8;
+                              if (row.sumaPct > limit) {
+                                pctColor = "text-rose-600 font-extrabold";
+                                titleAttr = `Supera el límite de ${limit}% para ${TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}`;
+                              } else if (row.sumaPct >= warningLimit) {
+                                pctColor = "text-amber-500 font-extrabold";
+                                titleAttr = `Cerca del límite de ${limit}% (Margen < 20% del límite) para ${TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}`;
+                              } else {
+                                pctColor = "text-emerald-600 font-semibold";
+                                titleAttr = `Dentro del límite de ${limit}% para ${TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}`;
+                              }
+                            }
+
+                            return (
+                              <tr key={row.tipo} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="p-3 pl-4 font-bold text-slate-700 flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getTipoColor(row.tipo) }} />
+                                  <span>{TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo}</span>
+                                </td>
+                                <td className="p-3 text-right font-mono font-bold text-slate-800">
+                                  {row.sumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                </td>
+                                <td className={`p-3 text-right font-mono ${pctColor}`} title={titleAttr}>
+                                  <div className="font-bold">{row.sumaPct.toFixed(2)}%</div>
+                                  {limit !== undefined && limit > 0 && (
+                                    <div className="text-[9px] text-slate-400 font-sans font-medium">
+                                      límite: {limit}%
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                  {row.restoEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                                </td>
+                                <td className="p-3 text-right font-mono font-medium text-slate-500">
+                                  {row.restoPct.toFixed(2)}%
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                         <tfoot>
                           <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
@@ -1857,18 +1940,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                             <circle cx="80" cy="80" r={70} fill="transparent" stroke="#f1f5f9" strokeWidth="16" />
                             {(() => {
                               let accumulatedPercentage = 0;
-                              const segments = expensesTypeSummaryRows.map((row) => {
-                                const value = Math.max(0, row.sumaEuros);
-                                const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
-                                return {
-                                  label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
-                                  value,
-                                  pct,
-                                  color: getTipoColor(row.tipo),
-                                };
-                              });
-
-                              return segments.map((seg, idx) => {
+                              return expensesTypeChartSegments.map((seg, idx) => {
                                 if (seg.value <= 0) return null;
                                 const segmentPercentage = seg.value / expensesTypeSummaryTotalSumaEuros;
                                 const strokeDasharray = `${segmentPercentage * 439.82} 439.82`;
@@ -1905,19 +1977,8 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                           {/* Center Text */}
                           <div className="absolute text-center px-4 pointer-events-none select-none max-w-full">
                             {(() => {
-                              const segments = expensesTypeSummaryRows.map((row) => {
-                                const value = Math.max(0, row.sumaEuros);
-                                const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
-                                return {
-                                  label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
-                                  value,
-                                  pct,
-                                  color: getTipoColor(row.tipo),
-                                };
-                              });
-
-                              if (hoveredExpenseTypeIdx !== null && segments[hoveredExpenseTypeIdx]) {
-                                const activeSeg = segments[hoveredExpenseTypeIdx];
+                              if (hoveredExpenseTypeIdx !== null && expensesTypeChartSegments[hoveredExpenseTypeIdx]) {
+                                const activeSeg = expensesTypeChartSegments[hoveredExpenseTypeIdx];
                                 return (
                                   <>
                                     <span className="block text-[8px] font-bold uppercase tracking-wider text-slate-400 truncate" style={{ color: activeSeg.color }}>
@@ -1973,17 +2034,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
                         {/* Floating Tooltip */}
                         {hoveredExpenseTypeIdx !== null && expenseTypeTooltipPos && (() => {
-                          const segments = expensesTypeSummaryRows.map((row) => {
-                            const value = Math.max(0, row.sumaEuros);
-                            const pct = expensesTypeSummaryTotalSumaEuros > 0 ? (value / expensesTypeSummaryTotalSumaEuros) * 100 : 0;
-                            return {
-                              label: TIPO_FRIENDLY_LABELS[row.tipo] || row.tipo,
-                              value,
-                              pct,
-                              color: getTipoColor(row.tipo),
-                            };
-                          });
-                          const seg = segments[hoveredExpenseTypeIdx];
+                          const seg = expensesTypeChartSegments[hoveredExpenseTypeIdx];
                           if (!seg) return null;
                           return (
                             <div

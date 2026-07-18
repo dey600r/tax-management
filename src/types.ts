@@ -129,9 +129,20 @@ export interface YearState {
   expenses?: Record<string, ExpenseRow[]>; // key is monthId
 }
 
+export interface MasterItem {
+  name: string;
+  limitPct: number;
+}
+
+export interface AppSettings {
+  tipos: MasterItem[];
+  clasificaciones: MasterItem[];
+}
+
 export interface AppState {
   years: number[];
   activeYear: number;
   activeView: ActiveView;
   yearStates: Record<number, YearState>;
+  settings?: AppSettings;
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow, ExpenseRow } from './types';
+import { Settings } from 'lucide-react';
+import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow, ExpenseRow, AppSettings } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
 import { YearTabs } from './components/YearTabs';
@@ -8,7 +9,29 @@ import { AnnualSummaryView } from './components/AnnualSummaryView';
 import { FloatingEditPanel } from './components/FloatingEditPanel';
 import { DashboardView, DashboardYearSummary } from './components/DashboardView';
 import { SavingsExpensesView } from './components/SavingsExpensesView';
+import { SettingsModal } from './components/SettingsModal';
 import { createDefaultYearState, computeYear, MONTH_LABELS } from './utils/calculations';
+
+const DEFAULT_SETTINGS: AppSettings = {
+  tipos: [
+    { name: 'Ahorro', limitPct: 10 },
+    { name: 'Gasto Fijo', limitPct: 50 },
+    { name: 'Gasto Estimado', limitPct: 20 },
+    { name: 'Inversión Fija', limitPct: 10 },
+    { name: 'Inversión Estimada', limitPct: 10 },
+  ],
+  clasificaciones: [
+    { name: 'Vivienda', limitPct: 30 },
+    { name: 'Alimentación', limitPct: 15 },
+    { name: 'Ocio', limitPct: 10 },
+    { name: 'Trabajo', limitPct: 5 },
+    { name: 'Vehículos', limitPct: 10 },
+    { name: 'Inversión', limitPct: 15 },
+    { name: 'Regalos', limitPct: 5 },
+    { name: 'Ahorro', limitPct: 5 },
+    { name: 'Ropa', limitPct: 5 },
+  ],
+};
 
 const LOCAL_STORAGE_KEY = 'gestor_nominas_state_v1';
 
@@ -19,6 +42,9 @@ export default function App() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && Array.isArray(parsed.years) && parsed.years.length > 0) {
+          if (!parsed.settings || !parsed.settings.tipos || (parsed.settings.tipos.length > 0 && 'nombre' in parsed.settings.tipos[0])) {
+            parsed.settings = DEFAULT_SETTINGS;
+          }
           return parsed;
         }
       }
@@ -35,10 +61,12 @@ export default function App() {
       yearStates: {
         [initialYear]: initialYearState,
       },
+      settings: DEFAULT_SETTINGS,
     };
   });
 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [editingCell, setEditingCell] = useState<{
     type: 'ss_config' | 'bracket_state' | 'bracket_regional' | 'otros_beneficios' | 'rendimiento_trabajo' | 'exemption' | 'exemption_dynamic' | 'salary' | 'benefit' | 'tax_empl' | 'tax_comp';
     monthId?: MonthId;
@@ -300,6 +328,85 @@ export default function App() {
     const yrState = { ...activeState };
     yrState.expenses = expenses;
     updateActiveYearState(yrState);
+  };
+
+  const handleRenameTipo = (oldName: string, newName: string) => {
+    setAppState((prev) => {
+      const updatedYearStates = { ...prev.yearStates };
+      for (const year of prev.years) {
+        const yrState = { ...updatedYearStates[year] };
+        let modified = false;
+        if (yrState.transfers) {
+          const updatedTransfers = { ...yrState.transfers };
+          for (const mId in updatedTransfers) {
+            updatedTransfers[mId] = updatedTransfers[mId].map((t) => {
+              if (t.tipo === oldName) {
+                modified = true;
+                return { ...t, tipo: newName as any };
+              }
+              return t;
+            });
+          }
+          if (modified) {
+            yrState.transfers = updatedTransfers;
+          }
+        }
+        if (yrState.expenses) {
+          const updatedExpenses = { ...yrState.expenses };
+          let modifiedExp = false;
+          for (const mId in updatedExpenses) {
+            updatedExpenses[mId] = updatedExpenses[mId].map((e) => {
+              if (e.tipo === oldName) {
+                modifiedExp = true;
+                return { ...e, tipo: newName as any };
+              }
+              return e;
+            });
+          }
+          if (modifiedExp) {
+            yrState.expenses = updatedExpenses;
+            modified = true;
+          }
+        }
+        if (modified) {
+          updatedYearStates[year] = yrState;
+        }
+      }
+      return {
+        ...prev,
+        yearStates: updatedYearStates,
+      };
+    });
+  };
+
+  const handleRenameClasificacion = (oldName: string, newName: string) => {
+    setAppState((prev) => {
+      const updatedYearStates = { ...prev.yearStates };
+      for (const year of prev.years) {
+        const yrState = { ...updatedYearStates[year] };
+        let modified = false;
+        if (yrState.expenses) {
+          const updatedExpenses = { ...yrState.expenses };
+          for (const mId in updatedExpenses) {
+            updatedExpenses[mId] = updatedExpenses[mId].map((e) => {
+              if (e.clasificacion === oldName) {
+                modified = true;
+                return { ...e, clasificacion: newName as any };
+              }
+              return e;
+            });
+          }
+          if (modified) {
+            yrState.expenses = updatedExpenses;
+            updatedYearStates[year] = yrState;
+          }
+        }
+      }
+      return {
+        ...prev,
+        yearStates: updatedYearStates,
+      };
+    });
   };
 
   const handleCopyMonthData = (fromMonthId: MonthId, toMonthId: MonthId) => {
@@ -583,9 +690,19 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
-                  Gestión de Ahorros y Gastos
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+                    Gestión de Ahorros y Gastos
+                  </h2>
+                  <button
+                    id="btn-open-settings"
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg transition-colors cursor-pointer focus:outline-none flex items-center justify-center shrink-0"
+                    title="Ajustes de datos maestros"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </button>
+                </div>
                 <p className="text-xs text-slate-400 font-medium">
                   Controla tus transferencias automáticas mensuales a otras entidades bancarias y planifica tu ahorro y gasto sin superar tu nómina neta.
                 </p>
@@ -609,6 +726,8 @@ export default function App() {
               onUpdateTransfers={handleUpdateTransfers}
               onUpdateExpenses={handleUpdateExpenses}
               showToast={showToast}
+              settings={appState.settings || DEFAULT_SETTINGS}
+              onOpenSettings={() => setIsSettingsOpen(true)}
             />
           </div>
 
@@ -687,6 +806,23 @@ export default function App() {
           inputType={editingCell.isText ? 'text' : 'number'}
           onSave={handleSaveFloatingPanel}
           onClose={() => setEditingCell(null)}
+        />
+      )}
+
+      {isSettingsOpen && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={appState.settings || DEFAULT_SETTINGS}
+          onSaveSettings={(newSettings) => {
+            setAppState((prev) => ({
+              ...prev,
+              settings: newSettings,
+            }));
+            showToast('Ajustes de datos maestros guardados', 'success');
+          }}
+          onRenameTipo={handleRenameTipo}
+          onRenameClasificacion={handleRenameClasificacion}
         />
       )}
 
