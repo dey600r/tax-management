@@ -257,6 +257,16 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
   const annualExpensesTotalSumaEuros = annualExpensesRows.reduce((sum, r) => sum + r.sumaEuros, 0);
 
+  const annualCapacidadReaccionEuros = CALENDAR_MONTHS.reduce((totalSum, m) => {
+    const mExpenses = yearState.expenses?.[m.id] || [];
+    const monthlyCapReaccion = mExpenses.reduce((sum, r) => {
+      const cap = r.capReaccion !== null && r.capReaccion !== undefined && !isNaN(r.capReaccion) ? r.capReaccion : 0;
+      return sum + (r.importe * cap) / 100;
+    }, 0);
+    return totalSum + monthlyCapReaccion;
+  }, 0);
+
+
   const annualTotalNeto = CALENDAR_MONTHS.reduce((sum, m) => {
     return sum + (computedYear.months[m.id]?.neto || 0);
   }, 0);
@@ -543,17 +553,35 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
             </div>
           </div>
           
-          <div className="bg-slate-50 border border-slate-150 rounded-lg px-3 py-1.5 flex items-center gap-2.5 shrink-0">
-            <div className="p-1 rounded-md bg-rose-500/10 text-rose-500 shrink-0">
-              <Coins className="w-3.5 h-3.5" />
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Capacidad de Reacción Anual */}
+            <div className="bg-slate-50 border border-slate-150 rounded-lg px-3 py-1.5 flex items-center gap-2.5">
+              <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 shrink-0">
+                <Gauge className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left">
+                <span className="block font-sans text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                  Capacidad Reacción Año
+                </span>
+                <span className="font-mono text-xs font-bold text-emerald-600 leading-none">
+                  {annualCapacidadReaccionEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                </span>
+              </div>
             </div>
-            <div className="text-left">
-              <span className="block font-sans text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">
-                Total Gastado Año
-              </span>
-              <span className="font-mono text-xs font-bold text-slate-800 leading-none">
-                {annualExpensesTotalSumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-              </span>
+
+            {/* Total Gastado Año */}
+            <div className="bg-slate-50 border border-slate-150 rounded-lg px-3 py-1.5 flex items-center gap-2.5">
+              <div className="p-1 rounded-md bg-rose-500/10 text-rose-500 shrink-0">
+                <Coins className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left">
+                <span className="block font-sans text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                  Total Gastado Año
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-800 leading-none">
+                  {annualExpensesTotalSumaEuros.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                </span>
+              </div>
             </div>
           </div>
         </div>
