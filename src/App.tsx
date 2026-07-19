@@ -198,7 +198,7 @@ export default function App() {
       year: yr,
       salarioBruto: comp.annualSummary.salarioBruto,
       retencionIrpf: comp.annualSummary.borradorRenta.retencionIrpf.pagadoEuro,
-      retencionCapital: comp.annualSummary.borradorRenta.retencionCapital.pagadoEuro,
+      retencionCapital: comp.annualSummary.irpfNecesario.retencionCapital.totalEuro,
       ssEmpleado: comp.annualSummary.borradorRenta.ssEmpleado.pagadoEuro,
       ssEmpresa: comp.annualSummary.borradorRenta.ssEmpresa.pagadoEuro,
       totalNetoNomina,

@@ -5,11 +5,6 @@ import {
   DollarSign, 
   Calendar, 
   Shield,
-  PieChart,
-  ArrowUpRight,
-  ArrowDownRight,
-  ArrowRight,
-  Percent,
   Coins,
   ChevronUp,
   ChevronDown
@@ -58,7 +53,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
   const [tooltipPos, setTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
   const [hoveredExpIdx, setHoveredExpIdx] = React.useState<number | null>(null);
   const [expTooltipPos, setExpTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
-  const [tableShowPercentage, setTableShowPercentage] = React.useState<boolean>(false);
+  const [hoveredInvIdx, setHoveredInvIdx] = React.useState<number | null>(null);
+  const [invTooltipPos, setInvTooltipPos] = React.useState<{ x: number; y: number } | null>(null);
+  const [expensesViewMode, setExpensesViewMode] = React.useState<'tipo' | 'clasificacion'>('tipo');
 
   const hasData = summaries.length > 0 && summaries.some((s) => s.salarioBruto > 0);
 
@@ -317,12 +314,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                       fill="transparent"
                       className="cursor-pointer"
                       onMouseMove={(e) => {
-                        const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                        const parentCard = e.currentTarget.closest("#card-dashboard-chart");
+                        const rect = parentCard?.getBoundingClientRect();
                         if (rect) {
-                          setTooltipPos({
-                            x: e.clientX - rect.left + 15,
-                            y: e.clientY - rect.top - 15,
-                          });
+                          const mouseX = e.clientX - rect.left;
+                          const mouseY = e.clientY - rect.top;
+                          const tooltipWidth = 250;
+                          const tooltipHeight = 220;
+
+                          let x = mouseX + 15;
+                          let y = mouseY - 15;
+
+                          if (x + tooltipWidth > rect.width) {
+                            x = mouseX - tooltipWidth - 15;
+                          }
+                          if (y + tooltipHeight > rect.height) {
+                            y = rect.height - tooltipHeight - 10;
+                          }
+                          if (x < 0) x = 5;
+                          if (y < 0) y = 5;
+
+                          setTooltipPos({ x, y });
                         }
                         setHoveredYearIdx(idx);
                       }}
@@ -477,14 +489,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
       {/* 2. RELACIÓN DE GASTOS Y AHORRO INTERANUAL */}
       {/* ====================================================================== */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm relative" id="card-dashboard-expenses-savings">
-        <div className="mb-2.5 space-y-1">
-          <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
-            <Coins className="w-4 h-4 text-rose-500" />
-            Relación de Gastos y Ahorro Interanual
-          </h3>
-          <p className="font-sans text-xs text-slate-400 font-medium">
-            Comparativa entre la nómina neta percibida (ingresos), los gastos totales registrados y el ahorro o nómina sobrante (gris clarito)
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="space-y-1">
+            <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
+              <Coins className="w-4 h-4 text-rose-500" />
+              Relación de Gastos y Ahorro Interanual
+            </h3>
+            <p className="font-sans text-xs text-slate-400 font-medium">
+              Comparativa entre la nómina neta percibida (ingresos), los gastos totales registrados y el ahorro o nómina sobrante (gris clarito)
+            </p>
+          </div>
+
+          {/* View Mode Switcher: TIPO vs CLASIFICACIÓN */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0 self-start sm:self-center">
+            <button
+              type="button"
+              onClick={() => setExpensesViewMode('tipo')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${expensesViewMode === 'tipo' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <span>Tipo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpensesViewMode('clasificacion')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${expensesViewMode === 'clasificacion' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <span>Clasificación</span>
+            </button>
+          </div>
         </div>
 
         {/* SVG Container for Expenses vs Savings */}
@@ -514,8 +546,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
               return (
                 <>
                   <svg viewBox={`0 0 ${expenseSvgWidth} ${expenseSvgHeight}`} width="100%" className="overflow-visible">
-                    {/* Horizontal gridlines */}
-                    {expenseTicks.map((tick, i) => {
+                     {/* Horizontal gridlines */}
+                     {expenseTicks.map((tick, i) => {
                       const y = getExpenseY(tick);
                       return (
                         <g key={i} className="opacity-40">
@@ -566,7 +598,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                         { name: 'Ahorro', color: '#10b981' },
                       ];
 
-                      const totalByTypeSum = types.reduce((acc, t) => acc + (s.expensesByType?.[t.name] || 0), 0);
+                      const classifications = [
+                        { name: 'Vivienda', label: 'Vivienda', color: '#3b82f6' },
+                        { name: 'Alimentacion', label: 'Alimentación', color: '#10b981' },
+                        { name: 'Ocio', label: 'Ocio / Bienestar', color: '#f43f5e' },
+                        { name: 'Trabajo', label: 'Trabajo / Negocios', color: '#8b5cf6' },
+                        { name: 'Vehiculos', label: 'Vehículos / Transporte', color: '#f59e0b' },
+                        { name: 'Inversion', label: 'Inversión / Ahorro activo', color: '#06b6d4' },
+                        { name: 'Regalos', label: 'Regalos / Donaciones', color: '#ec4899' },
+                        { name: 'Ropa', label: 'Ropa / Calzado', color: '#14b8a6' },
+                        { name: 'Ahorro', label: 'Ahorro Directo / Reservas', color: '#64748b' },
+                      ];
+
+                      const currentItems = expensesViewMode === 'tipo'
+                        ? types.map(t => ({ id: t.name, label: t.name, color: t.color, val: s.expensesByType?.[t.name] || 0 }))
+                        : classifications.map(c => ({ id: c.name, label: c.label, color: c.color, val: s.expensesByCategory?.[c.name] || 0 }));
+
+                      const totalSum = currentItems.reduce((acc, item) => acc + item.val, 0);
 
                       const sobranteHeight = Math.max(0, getExpenseY(limitVal) - getExpenseY(netoVal));
                       const ySobranteTop = getExpenseY(netoVal);
@@ -591,37 +639,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                             Año {s.year}
                           </text>
 
-                          {/* 1. SEGMENETED GASTOS REGISTRADOS BARS */}
+                          {/* 1. SEGMENTED GASTOS REGISTRADOS BARS */}
                           {(() => {
                             let accumulatedEuros = 0;
-                            return types.map((t) => {
-                              const realVal = s.expensesByType?.[t.name] || 0;
+                            return currentItems.map((item) => {
+                              const realVal = item.val;
                               if (realVal <= 0) return null;
-                              
+
                               const nextAccumulatedEuros = accumulatedEuros + realVal;
-                              
-                              const scaledStart = totalByTypeSum > 0 ? (accumulatedEuros / totalByTypeSum) * limitVal : 0;
-                              const scaledEnd = totalByTypeSum > 0 ? (nextAccumulatedEuros / totalByTypeSum) * limitVal : 0;
-                              
+
+                              const scaledStart = totalSum > 0 ? (accumulatedEuros / totalSum) * limitVal : 0;
+                              const scaledEnd = totalSum > 0 ? (nextAccumulatedEuros / totalSum) * limitVal : 0;
+
                               const segmentYStart = getExpenseY(scaledStart);
                               const segmentYEnd = getExpenseY(scaledEnd);
                               const segmentHeight = Math.max(0, segmentYStart - segmentYEnd);
-                              
+
                               accumulatedEuros = nextAccumulatedEuros;
 
                               if (segmentHeight <= 0) return null;
 
                               return (
                                 <rect
-                                  key={t.name}
+                                  key={item.id}
                                   x={barX}
                                   y={segmentYEnd}
                                   width={expenseBarWidth}
                                   height={segmentHeight}
-                                  fill={t.color}
+                                  fill={item.color}
                                   className="transition-all hover:brightness-95"
                                 >
-                                  <title>{t.name}: {realVal.toLocaleString('es-ES')}€</title>
+                                  <title>{item.label}: {realVal.toLocaleString('es-ES')}€</title>
                                 </rect>
                               );
                             });
@@ -660,12 +708,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                             fill="transparent"
                             className="cursor-pointer"
                             onMouseMove={(e) => {
-                              const rect = e.currentTarget.ownerSVGElement?.getBoundingClientRect();
+                              const parentCard = e.currentTarget.closest("#card-dashboard-expenses-savings");
+                              const rect = parentCard?.getBoundingClientRect();
                               if (rect) {
-                                setExpTooltipPos({
-                                  x: e.clientX - rect.left + 15,
-                                  y: e.clientY - rect.top - 15,
-                                });
+                                const mouseX = e.clientX - rect.left;
+                                const mouseY = e.clientY - rect.top;
+                                const tooltipWidth = 250;
+                                const tooltipHeight = expensesViewMode === 'tipo' ? 280 : 340;
+
+                                let x = mouseX + 15;
+                                let y = mouseY - 15;
+
+                                if (x + tooltipWidth > rect.width) {
+                                  x = mouseX - tooltipWidth - 15;
+                                }
+                                if (y + tooltipHeight > rect.height) {
+                                  y = rect.height - tooltipHeight - 10;
+                                }
+                                if (x < 0) x = 5;
+                                if (y < 0) y = 5;
+
+                                setExpTooltipPos({ x, y });
                               }
                               setHoveredExpIdx(idx);
                             }}
@@ -705,26 +768,69 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
 
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-2 border-t border-slate-100 pt-2 text-xs" id="dashboard-expenses-savings-legend">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#f43f5e] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Gasto Fijo</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#fb923c] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Gasto Estimado</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#6366f1] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Inversión Fija</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#38bdf8] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Inversión Estimada</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-xs bg-[#10b981] shrink-0" />
-            <span className="font-sans font-medium text-slate-600">Ahorro</span>
-          </div>
+          {expensesViewMode === 'tipo' ? (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#f43f5e] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">Gasto Fijo</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#fb923c] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">Gasto Estimado</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#6366f1] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">Inversión Fija</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#38bdf8] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">Inversión Estimada</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#10b981] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">Ahorro</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#3b82f6] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🏠 Vivienda</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#10b981] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🛒 Alimentación</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#f43f5e] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🎉 Ocio / Bienestar</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#8b5cf6] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">💼 Trabajo</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#f59e0b] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🚗 Vehículos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#06b6d4] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">📈 Inversión</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#ec4899] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🎁 Regalos</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#14b8a6] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">👕 Ropa</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-xs bg-[#64748b] shrink-0" />
+                <span className="font-sans font-medium text-slate-600">🛡️ Ahorro</span>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-xs bg-[#cbd5e1] shrink-0" />
             <span className="font-sans font-semibold text-slate-700">Nómina Sobrante (Ahorro)</span>
@@ -742,7 +848,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
           const gastadoVal = s.totalGastado ?? 0;
           const sobranteVal = Math.max(0, netoVal - gastadoVal);
           const deficitVal = Math.max(0, gastadoVal - netoVal);
-          
+
           const pctGastado = netoVal > 0 ? (gastadoVal / netoVal) * 100 : 0;
           const pctSobrante = netoVal > 0 ? (sobranteVal / netoVal) * 100 : 0;
           const pctDeficit = netoVal > 0 ? (deficitVal / netoVal) * 100 : 0;
@@ -754,6 +860,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
             { name: 'Inversion Estimada', color: '#38bdf8' },
             { name: 'Ahorro', color: '#10b981' },
           ];
+
+          const classifications = [
+            { name: 'Vivienda', label: 'Vivienda', color: '#3b82f6' },
+            { name: 'Alimentacion', label: 'Alimentación', color: '#10b981' },
+            { name: 'Ocio', label: 'Ocio / Bienestar', color: '#f43f5e' },
+            { name: 'Trabajo', label: 'Trabajo / Negocios', color: '#8b5cf6' },
+            { name: 'Vehiculos', label: 'Vehículos / Transporte', color: '#f59e0b' },
+            { name: 'Inversion', label: 'Inversión / Ahorro activo', color: '#06b6d4' },
+            { name: 'Regalos', label: 'Regalos / Donaciones', color: '#ec4899' },
+            { name: 'Ropa', label: 'Ropa / Calzado', color: '#14b8a6' },
+            { name: 'Ahorro', label: 'Ahorro Directo / Reservas', color: '#64748b' },
+          ];
+
+          const currentItems = expensesViewMode === 'tipo'
+            ? types.map(t => ({ id: t.name, label: t.name, color: t.color, val: s.expensesByType?.[t.name] || 0 }))
+            : classifications.map(c => ({ id: c.name, label: c.label, color: c.color, val: s.expensesByCategory?.[c.name] || 0 }));
 
           return (
             <div
@@ -785,16 +907,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                   </span>
                 </div>
 
-                {/* Desglose por Tipo */}
-                {types.map((t) => {
-                  const val = s.expensesByType?.[t.name] || 0;
+                {/* Desglose por Tipo o Clasificación */}
+                {currentItems.map((item) => {
+                  const val = item.val;
                   if (val <= 0) return null;
                   const pct = netoVal > 0 ? (val / netoVal) * 100 : 0;
                   return (
-                    <div key={t.name} className="flex items-center justify-between gap-4 pl-2 text-xxs">
+                    <div key={item.id} className="flex items-center justify-between gap-4 pl-2 text-xxs">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: t.color }} />
-                        <span className="text-slate-400 font-medium">{t.name}:</span>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-slate-400 font-medium">{item.label}:</span>
                       </div>
                       <span className="font-mono font-semibold text-slate-300">
                         {val.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} ({pct.toFixed(1)}%)
@@ -838,171 +960,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
         })()}
       </div>
 
-      {/* ====================================================================== */}
-      {/* 3. DISTRIBUCIÓN HISTÓRICA DE GASTOS POR CATEGORÍAS */}
-      {/* ====================================================================== */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4" id="card-dashboard-categories-distribution">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-purple-500" />
-              Distribución Histórica de Gastos por Categoría
-            </h3>
-            <p className="font-sans text-xs text-slate-400 font-medium">
-              Evolución detallada de las partidas del presupuesto familiar. Compara importes absolutos o peso relativo sobre ingresos netos.
-            </p>
-          </div>
 
-          {/* Value / Percentage Switcher */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 shrink-0 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setTableShowPercentage(false)}
-              className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${!tableShowPercentage ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              <span>Euros (€)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTableShowPercentage(true)}
-              className={`flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${tableShowPercentage ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Percent className="w-3.5 h-3.5" />
-              <span>Porcentaje (%)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Categories Comparative Matrix Grid */}
-        <div className="overflow-x-auto border border-slate-200/60 rounded-xl">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                <th className="p-3.5 pl-4">Categoría de Gasto</th>
-                {summaries.map((s) => (
-                  <th key={s.year} className="p-3.5 text-right font-mono font-bold text-slate-600 w-32">
-                    Año {s.year}
-                  </th>
-                ))}
-                {summaries.length >= 2 && (
-                  <th className="p-3.5 text-center w-28">Tendencia</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-sans">
-              {(() => {
-                const CLASSIFICATIONS = ['Vivienda', 'Alimentacion', 'Ocio', 'Trabajo', 'Vehiculos', 'Inversion', 'Regalos', 'Ropa', 'Ahorro'];
-                const CATEGORY_LABELS: Record<string, string> = {
-                  Vivienda: '🏠 Vivienda',
-                  Alimentacion: '🛒 Alimentación',
-                  Ocio: '🎉 Ocio / Bienestar',
-                  Trabajo: '💼 Trabajo / Negocios',
-                  Vehiculos: '🚗 Vehículos / Transporte',
-                  Inversion: '📈 Inversión / Ahorro activo',
-                  Regalos: '🎁 Regalos / Donaciones',
-                  Ropa: '👕 Ropa / Calzado',
-                  Ahorro: '🛡️ Ahorro Directo / Reservas',
-                };
-
-                return CLASSIFICATIONS.map((cat) => {
-                  const hasAnyValue = summaries.some((s) => (s.expensesByCategory?.[cat] ?? 0) > 0);
-                  if (!hasAnyValue) return null; // Only show categories with actual records to avoid cluttering
-
-                  return (
-                    <tr key={cat} className="hover:bg-slate-50/50 transition-colors relative">
-                      {/* Name */}
-                      <td className="p-3.5 pl-4 font-semibold text-slate-700 font-sans">
-                        {CATEGORY_LABELS[cat] || cat}
-                      </td>
-
-                      {/* Values per year */}
-                      {summaries.map((s) => {
-                        const yearNeto = s.totalNetoNomina ?? Math.max(0, s.salarioBruto - s.retencionIrpf - s.ssEmpleado - s.retencionCapital);
-                        const value = s.expensesByCategory?.[cat] ?? 0;
-                        const pct = yearNeto > 0 ? (value / yearNeto) * 100 : 0;
-
-                        return (
-                          <td key={s.year} className="p-3.5 text-right font-mono font-bold text-slate-800 relative min-w-[120px]">
-                            {/* Visual background proportion bar */}
-                            <div 
-                              className="absolute right-0.5 top-1 bottom-1 bg-blue-500/5 rounded-l border-r-2 border-blue-500/20 pointer-events-none" 
-                              style={{ width: `${Math.min(95, pct)}%` }}
-                            />
-                            
-                            <span className="relative z-1">
-                              {tableShowPercentage ? (
-                                `${pct.toFixed(1)}%`
-                              ) : (
-                                `${value.toLocaleString('es-ES', { maximumFractionDigits: 0 })} €`
-                              )}
-                            </span>
-                          </td>
-                        );
-                      })}
-
-                      {/* Tendencia (Only if there are at least 2 years of data) */}
-                      {summaries.length >= 2 && (() => {
-                        const prevYearObj = summaries[summaries.length - 2];
-                        const currYearObj = summaries[summaries.length - 1];
-
-                        const prevNeto = prevYearObj.totalNetoNomina ?? Math.max(0, prevYearObj.salarioBruto - prevYearObj.retencionIrpf - prevYearObj.ssEmpleado - prevYearObj.retencionCapital);
-                        const currNeto = currYearObj.totalNetoNomina ?? Math.max(0, currYearObj.salarioBruto - currYearObj.retencionIrpf - currYearObj.ssEmpleado - currYearObj.retencionCapital);
-
-                        const prevVal = prevYearObj.expensesByCategory?.[cat] ?? 0;
-                        const currVal = currYearObj.expensesByCategory?.[cat] ?? 0;
-
-                        const prevPct = prevNeto > 0 ? (prevVal / prevNeto) * 100 : 0;
-                        const currPct = currNeto > 0 ? (currVal / currNeto) * 100 : 0;
-
-                        const changeVal = currVal - prevVal;
-                        const changePct = currPct - prevPct;
-
-                        const isDecreased = tableShowPercentage ? changePct < -0.1 : changeVal < -1;
-                        const isIncreased = tableShowPercentage ? changePct > 0.1 : changeVal > 1;
-
-                        if (isDecreased) {
-                          return (
-                            <td className="p-3.5 text-center shrink-0">
-                              <span className="inline-flex items-center gap-1 font-sans font-bold text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
-                                <ArrowDownRight className="w-3 h-3" />
-                                <span>-{tableShowPercentage ? `${Math.abs(changePct).toFixed(1)}%` : `${Math.abs(changeVal).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€`}</span>
-                              </span>
-                            </td>
-                          );
-                        } else if (isIncreased) {
-                          return (
-                            <td className="p-3.5 text-center shrink-0">
-                              <span className="inline-flex items-center gap-1 font-sans font-bold text-[10px] text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
-                                <ArrowUpRight className="w-3 h-3" />
-                                <span>+{tableShowPercentage ? `${Math.abs(changePct).toFixed(1)}%` : `${Math.abs(changeVal).toLocaleString('es-ES', { maximumFractionDigits: 0 })}€`}</span>
-                              </span>
-                            </td>
-                          );
-                        } else {
-                          return (
-                            <td className="p-3.5 text-center text-slate-400 font-mono text-[10px] shrink-0">
-                              <span className="inline-flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5 font-bold">
-                                <ArrowRight className="w-3 h-3" />
-                                <span>Estable</span>
-                              </span>
-                            </td>
-                          );
-                        }
-                      })()}
-                    </tr>
-                  );
-                });
-              })()}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       {/* ====================================================================== */}
       {/* 4. RENDIMIENTO DE INVERSIONES (BASE DEL AHORRO) */}
       {/* ====================================================================== */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-5" id="card-dashboard-investments-performance">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-5 relative" id="card-dashboard-investments-performance">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
           <div className="space-y-1">
             <h3 className="font-sans font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">
@@ -1087,7 +1050,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
               </div>
 
               {/* Historical Comparison Chart */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-3xs flex flex-col justify-between max-w-3xl mx-auto w-full">
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-3xs flex flex-col justify-between max-w-3xl mx-auto w-full relative" id="historical-investments-card-inner">
                 <div className="border-b border-slate-100 pb-3 mb-4 text-center">
                   <h4 className="font-sans font-bold text-slate-700 text-xs uppercase tracking-wider">
                     Histórico de Rendimiento de Inversiones
@@ -1120,7 +1083,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                   };
 
                   return (
-                    <div className="w-full overflow-x-auto">
+                    <>
+                      <div className="w-full overflow-x-auto">
                       <div className="min-w-[550px] max-w-[800px] mx-auto relative">
                         <svg viewBox={`0 0 ${invSvgWidth} ${invSvgHeight}`} width="100%" className="overflow-visible">
                           {/* Horizontal gridlines */}
@@ -1168,14 +1132,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                             const yImpEnd = getInvY(netVal + comVal + impVal);
                             const heightImp = Math.max(0, yComEnd - yImpEnd);
 
+                            const isCurrentHovered = hoveredInvIdx === idx;
+
                             return (
-                              <g key={s.year}>
+                              <g 
+                                key={s.year}
+                                className="transition-opacity duration-200"
+                                style={{ opacity: hoveredInvIdx !== null && !isCurrentHovered ? 0.45 : 1 }}
+                              >
                                 {/* Year label */}
                                 <text
                                   x={groupCenterX}
                                   y={invSvgHeight - invMarginBottom + 18}
                                   textAnchor="middle"
-                                  className="font-mono text-[10px] font-bold fill-slate-500"
+                                  className={`font-mono text-[10px] font-bold ${isCurrentHovered ? 'fill-slate-900 font-extrabold' : 'fill-slate-500'}`}
                                 >
                                   Año {s.year}
                                 </text>
@@ -1215,6 +1185,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                                     className="transition-all hover:brightness-95"
                                   />
                                 )}
+
+                                {/* Invisible Overlay capture mouse to make hover super easy */}
+                                <rect
+                                  x={groupCenterX - invGroupWidth / 2}
+                                  y={invMarginTop}
+                                  width={invGroupWidth}
+                                  height={invChartHeight}
+                                  fill="transparent"
+                                  className="cursor-pointer"
+                                  onMouseMove={(e) => {
+                                    const parentCard = e.currentTarget.closest("#historical-investments-card-inner");
+                                    const rect = parentCard?.getBoundingClientRect();
+                                    if (rect) {
+                                      const mouseX = e.clientX - rect.left;
+                                      const mouseY = e.clientY - rect.top;
+                                      const tooltipWidth = 250;
+                                      const tooltipHeight = 160;
+
+                                      let x = mouseX + 15;
+                                      let y = mouseY - 15;
+
+                                      if (x + tooltipWidth > rect.width) {
+                                        x = mouseX - tooltipWidth - 15;
+                                      }
+                                      if (y + tooltipHeight > rect.height) {
+                                        y = rect.height - tooltipHeight - 10;
+                                      }
+                                      if (x < 0) x = 5;
+                                      if (y < 0) y = 5;
+
+                                      setInvTooltipPos({ x, y });
+                                    }
+                                    setHoveredInvIdx(idx);
+                                  }}
+                                  onMouseEnter={() => setHoveredInvIdx(idx)}
+                                  onMouseLeave={() => {
+                                    setHoveredInvIdx(null);
+                                    setInvTooltipPos(null);
+                                  }}
+                                />
                               </g>
                             );
                           })}
@@ -1255,8 +1265,77 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ summaries }) => {
                         </div>
                       </div>
                     </div>
-                  );
-                })()}
+
+                    {/* Interactive Investment Tooltip Card - RENDERED OUTSIDE of overflow-x-auto */}
+                    {hoveredInvIdx !== null && invTooltipPos && (() => {
+                      const s = summaries[hoveredInvIdx];
+                      const netVal = s.totalInversionNeto || 0;
+                      const comVal = s.totalInversionComisiones || 0;
+                      const impVal = s.totalInversionImpuestos || 0;
+                      const brutoVal = netVal + comVal + impVal;
+
+                      const pctNet = brutoVal > 0 ? (netVal / brutoVal) * 100 : 0;
+                      const pctCom = brutoVal > 0 ? (comVal / brutoVal) * 100 : 0;
+                      const pctImp = brutoVal > 0 ? (impVal / brutoVal) * 100 : 0;
+
+                      return (
+                        <div
+                          className="absolute z-10 bg-slate-900/95 text-white text-xs font-sans rounded-xl p-3 shadow-xl pointer-events-none border border-slate-800/60 backdrop-blur-md space-y-2 min-w-[240px]"
+                          style={{ left: invTooltipPos.x, top: invTooltipPos.y }}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5">
+                            <span className="font-bold text-sm text-white">Año {s.year}</span>
+                            <span className="font-mono text-xxs font-bold text-slate-400">Rendimiento</span>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {/* Rendimiento Bruto */}
+                            <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 pb-1">
+                              <span className="text-slate-300 font-medium">Rendimiento Bruto:</span>
+                              <span className="font-mono font-bold text-amber-300">
+                                {brutoVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                              </span>
+                            </div>
+
+                            {/* Rendimiento Neto */}
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                <span className="text-slate-300 font-medium font-semibold">Beneficio Neto:</span>
+                              </div>
+                              <span className="font-mono font-bold text-emerald-300">
+                                {netVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} ({pctNet.toFixed(1)}%)
+                              </span>
+                            </div>
+
+                            {/* Impuestos */}
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                                <span className="text-slate-300 font-medium">Retenciones (IRPF):</span>
+                              </div>
+                              <span className="font-mono font-bold text-rose-300">
+                                {impVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} ({pctImp.toFixed(1)}%)
+                              </span>
+                            </div>
+
+                            {/* Comisiones */}
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                                <span className="text-slate-300 font-medium">Comisiones:</span>
+                              </div>
+                              <span className="font-mono font-bold text-slate-300">
+                                {comVal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} ({pctCom.toFixed(1)}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                );
+              })()}
               </div>
             </div>
           );
