@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Calculator, PiggyBank, X } from 'lucide-react';
+import { LayoutDashboard, Calculator, PiggyBank, Landmark, X } from 'lucide-react';
 import { ActiveView } from '../types';
 
 interface SidenavProps {
@@ -96,6 +96,19 @@ export const Sidenav: React.FC<SidenavProps> = ({
           >
             <PiggyBank className="w-5 h-5" />
             <span>Ahorros y Gastos</span>
+          </button>
+
+          <button
+            id="sidenav-item-patrimonio"
+            onClick={() => handleItemClick('patrimonio')}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all text-left cursor-pointer focus:outline-none ${
+              activeView === 'patrimonio'
+                ? 'bg-slate-800 text-white border-l-4 border-l-blue-600 rounded-r-lg'
+                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100 rounded-lg'
+            }`}
+          >
+            <Landmark className="w-5 h-5" />
+            <span>Patrimonio</span>
           </button>
         </nav>
 

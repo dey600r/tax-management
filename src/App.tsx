@@ -9,7 +9,9 @@ import { AnnualSummaryView } from './components/AnnualSummaryView';
 import { FloatingEditPanel } from './components/FloatingEditPanel';
 import { DashboardView, DashboardYearSummary } from './components/DashboardView';
 import { SavingsExpensesView } from './components/SavingsExpensesView';
+import { PatrimonioView, DEFAULT_PATRIMONIO_ITEMS } from './components/PatrimonioView';
 import { SettingsModal } from './components/SettingsModal';
+import { PatrimonioState } from './types';
 import { createDefaultYearState, computeYear, MONTH_LABELS } from './utils/calculations';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -62,6 +64,11 @@ export default function App() {
         [initialYear]: initialYearState,
       },
       settings: DEFAULT_SETTINGS,
+      patrimonio: {
+        tiempo: 5,
+        inflacion: 2.0,
+        items: DEFAULT_PATRIMONIO_ITEMS,
+      },
     };
   });
 
@@ -650,6 +657,19 @@ export default function App() {
     showToast('Datos actualizados correctamente', 'success');
   };
 
+  const handleUpdatePatrimonio = (newPatrimonio: PatrimonioState) => {
+    setAppState((prev) => ({
+      ...prev,
+      patrimonio: newPatrimonio,
+    }));
+  };
+
+  const patrimonioState: PatrimonioState = appState.patrimonio || {
+    tiempo: 5,
+    inflacion: 2.0,
+    items: DEFAULT_PATRIMONIO_ITEMS,
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       
@@ -728,8 +748,19 @@ export default function App() {
               showToast={showToast}
               settings={appState.settings || DEFAULT_SETTINGS}
               onOpenSettings={() => setIsSettingsOpen(true)}
+              patrimonioState={patrimonioState}
             />
           </div>
+
+        ) : appState.activeView === 'patrimonio' ? (
+
+          /* Patrimonio View */
+          <PatrimonioView
+            patrimonioState={patrimonioState}
+            onUpdatePatrimonio={handleUpdatePatrimonio}
+            showToast={showToast}
+            yearStates={appState.yearStates}
+          />
 
         ) : (
           

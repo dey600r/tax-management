@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MonthId, YearState, TransferRow, ExpenseRow } from '../types';
+import { MonthId, YearState, TransferRow, ExpenseRow, PatrimonioState } from '../types';
+import { DEFAULT_PATRIMONIO_ITEMS } from './PatrimonioView';
 import { ComputedYearResult } from '../utils/calculations';
 import { 
   Plus, 
@@ -37,6 +38,7 @@ interface SavingsExpensesViewProps {
   showToast: (message: string, type: 'success' | 'error') => void;
   settings: any;
   onOpenSettings?: () => void;
+  patrimonioState?: PatrimonioState;
 }
 
 const CALENDAR_MONTHS: { id: MonthId; label: string }[] = [
@@ -122,8 +124,15 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   showToast,
   settings,
   onOpenSettings,
+  patrimonioState,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<MonthId>('enero');
+
+  // Patrimonio accounts list for dropdowns
+  const rawPatrimonioAccounts: string[] = patrimonioState?.items?.map((it) => it.cuenta) || DEFAULT_PATRIMONIO_ITEMS.map((it) => it.cuenta);
+  const patrimonioAccounts: string[] = Array.from(
+    new Set(rawPatrimonioAccounts.filter((val): val is string => typeof val === 'string' && val.trim() !== ''))
+  );
 
   // Active month data
   const monthTransfers = yearState.transfers?.[selectedMonth] || [];
@@ -420,10 +429,12 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
 
   const handleAddTransferRow = () => {
     const defaultTipo = dynamicTipos[0] || 'Gasto Fijo';
+    const defaultOrigen = patrimonioAccounts[0] || '';
+    const defaultDestino = patrimonioAccounts[1] || patrimonioAccounts[0] || '';
     const newRow: TransferRow = {
       id: 'trans_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      cuentaOrigen: '',
-      cuentaDestino: '',
+      cuentaOrigen: defaultOrigen,
+      cuentaDestino: defaultDestino,
       concepto: '',
       tipo: defaultTipo as any,
       importe: 0,
@@ -494,9 +505,12 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
   const handleAddExpenseRow = () => {
     const defaultTipo = dynamicTipos[0] || 'Gasto Fijo';
     const defaultClasificacion = dynamicClasificaciones[0] || 'Vivienda';
+    const defaultOrigen = patrimonioAccounts[0] || '';
+    const defaultDestino = patrimonioAccounts[1] || patrimonioAccounts[0] || '';
     const newRow: ExpenseRow = {
       id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      cuentaOrigen: '',
+      cuentaOrigen: defaultOrigen,
+      cuentaDestino: defaultDestino,
       concepto: '',
       tipo: defaultTipo as any,
       clasificacion: defaultClasificacion as any,
@@ -1010,28 +1024,53 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                   ) : (
                     monthTransfers.map((row, index) => {
                       const rowPct = netoNomina > 0 ? (row.importe / netoNomina) * 100 : 0;
+                      const origenOptions = Array.from(
+                        new Set([...patrimonioAccounts, ...(row.cuentaOrigen ? [row.cuentaOrigen] : [])])
+                      ).filter(Boolean);
+                      const destinoOptions = Array.from(
+                        new Set([...patrimonioAccounts, ...(row.cuentaDestino ? [row.cuentaDestino] : [])])
+                      ).filter(Boolean);
+
                       return (
                         <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-1.5 pl-4">
-                            <input
-                              type="text"
+                            <select
                               value={row.cuentaOrigen}
-                              placeholder="p. ej. BBVA Nómina"
                               onChange={(e) => handleUpdateTransferField(index, 'cuentaOrigen', e.target.value)}
-                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 transition-all font-sans"
-                            />
+                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 font-medium transition-all font-sans cursor-pointer focus:outline-none"
+                            >
+                              {!row.cuentaOrigen && (
+                                <option value="" disabled>
+                                  -- Seleccionar Origen --
+                                </option>
+                              )}
+                              {origenOptions.map((cuenta) => (
+                                <option key={cuenta} value={cuenta}>
+                                  {cuenta}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td className="p-1.5 text-center text-slate-300 font-bold">
                             <ArrowRight className="w-4 h-4 mx-auto" />
                           </td>
                           <td className="p-1.5">
-                            <input
-                              type="text"
+                            <select
                               value={row.cuentaDestino}
-                              placeholder="p. ej. Trade Republic"
                               onChange={(e) => handleUpdateTransferField(index, 'cuentaDestino', e.target.value)}
-                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 transition-all font-sans"
-                            />
+                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 font-medium transition-all font-sans cursor-pointer focus:outline-none"
+                            >
+                              {!row.cuentaDestino && (
+                                <option value="" disabled>
+                                  -- Seleccionar Destino --
+                                </option>
+                              )}
+                              {destinoOptions.map((cuenta) => (
+                                <option key={cuenta} value={cuenta}>
+                                  {cuenta}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td className="p-1.5">
                             <input
@@ -1442,9 +1481,11 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
                     <th className="p-3 pl-4">Cuenta Origen</th>
+                    <th className="p-3 w-8"></th>
+                    <th className="p-3">Cuenta Destino</th>
+                    <th className="p-3">Concepto</th>
                     <th className="p-3 w-40">Tipo</th>
                     <th className="p-3 w-44">Clasificación</th>
-                    <th className="p-3">Concepto</th>
                     <th className="p-3 text-right w-36">Importe (€)</th>
                     <th className="p-3 text-right w-32">% Neto</th>
                     <th className="p-3 text-right w-40">Cap. Reacción %</th>
@@ -1454,22 +1495,73 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {monthExpenses.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 font-medium">
+                      <td colSpan={10} className="p-8 text-center text-slate-400 font-medium">
                         No hay gastos mensuales registrados en este mes. Haz clic en "Añadir Gasto" para empezar.
                       </td>
                     </tr>
                   ) : (
                     monthExpenses.map((row, index) => {
                       const rowPct = netoNomina > 0 ? (row.importe / netoNomina) * 100 : 0;
+                      const origenOptions = Array.from(
+                        new Set([...patrimonioAccounts, ...(row.cuentaOrigen ? [row.cuentaOrigen] : [])])
+                      ).filter(Boolean);
+                      const destinoOptions = Array.from(
+                        new Set([...patrimonioAccounts, ...(row.cuentaDestino ? [row.cuentaDestino] : [])])
+                      ).filter(Boolean);
+
                       return (
                         <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
                           {/* Cuenta Origen */}
                           <td className="p-1.5 pl-4">
+                            <select
+                              value={row.cuentaOrigen || ''}
+                              onChange={(e) => handleUpdateExpenseField(index, 'cuentaOrigen', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 font-medium transition-all font-sans cursor-pointer focus:outline-none"
+                            >
+                              {!row.cuentaOrigen && (
+                                <option value="" disabled>
+                                  -- Seleccionar Origen --
+                                </option>
+                              )}
+                              {origenOptions.map((cuenta) => (
+                                <option key={cuenta} value={cuenta}>
+                                  {cuenta}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className="p-1.5 text-center text-slate-300 font-bold">
+                            <ArrowRight className="w-4 h-4 mx-auto" />
+                          </td>
+
+                          {/* Cuenta Destino */}
+                          <td className="p-1.5">
+                            <select
+                              value={row.cuentaDestino || ''}
+                              onChange={(e) => handleUpdateExpenseField(index, 'cuentaDestino', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 font-medium transition-all font-sans cursor-pointer focus:outline-none"
+                            >
+                              {!row.cuentaDestino && (
+                                <option value="" disabled>
+                                  -- Seleccionar Destino --
+                                </option>
+                              )}
+                              {destinoOptions.map((cuenta) => (
+                                <option key={cuenta} value={cuenta}>
+                                  {cuenta}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          {/* Concepto */}
+                          <td className="p-1.5">
                             <input
                               type="text"
-                              value={row.cuentaOrigen}
-                              placeholder="p. ej. Cuenta Corriente"
-                              onChange={(e) => handleUpdateExpenseField(index, 'cuentaOrigen', e.target.value)}
+                              value={row.concepto || ''}
+                              placeholder="p. ej. Alquiler o compra"
+                              onChange={(e) => handleUpdateExpenseField(index, 'concepto', e.target.value)}
                               className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 transition-all font-sans"
                             />
                           </td>
@@ -1502,17 +1594,6 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                                 </option>
                               ))}
                             </select>
-                          </td>
-
-                          {/* Concepto */}
-                          <td className="p-1.5">
-                            <input
-                              type="text"
-                              value={row.concepto || ''}
-                              placeholder="p. ej. Alquiler o compra"
-                              onChange={(e) => handleUpdateExpenseField(index, 'concepto', e.target.value)}
-                              className="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded px-2.5 py-1.5 text-slate-800 transition-all font-sans"
-                            />
                           </td>
 
                           {/* Importe */}
@@ -1565,7 +1646,7 @@ export const SavingsExpensesView: React.FC<SavingsExpensesViewProps> = ({
                 {monthExpenses.length > 0 && (
                   <tfoot>
                     <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800 font-mono">
-                      <td colSpan={4} className="py-2.5 pl-[17px] text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
+                      <td colSpan={6} className="py-2.5 pl-[17px] text-left font-sans text-[10px] text-slate-500 uppercase tracking-wider">
                         Totales
                       </td>
                       <td className="py-2.5 pr-2 text-right text-slate-900">

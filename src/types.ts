@@ -1,4 +1,24 @@
-export type ActiveView = 'dashboard' | 'cuenta-anual' | 'ahorros-gastos';
+export type ActiveView = 'dashboard' | 'cuenta-anual' | 'ahorros-gastos' | 'patrimonio';
+
+export type PatrimonioTipo = 'Pasivos' | 'Activos';
+export type PatrimonioTipoCuenta = 'CUENTAS ES' | 'CRIPTO' | 'VALORES EXT' | 'CUENTAS EXT';
+export type PatrimonioTipoActivo = 'Liquidez Rapida' | 'Liquidez Lenta' | 'Bienes' | 'Deuda' | 'Bienes y Deuda';
+
+export interface PatrimonioItem {
+  id: string;
+  cuenta: string;
+  tipo: PatrimonioTipo;
+  tipoCuenta: PatrimonioTipoCuenta;
+  tipoActivo: PatrimonioTipoActivo;
+  ahorro: number;
+  interesEst: number;
+}
+
+export interface PatrimonioState {
+  tiempo: number;
+  inflacion: number;
+  items: PatrimonioItem[];
+}
 
 export interface EmployeeData {
   nombre: string;
@@ -108,6 +128,7 @@ export interface TransferRow {
 export interface ExpenseRow {
   id: string;
   cuentaOrigen: string;
+  cuentaDestino?: string;
   concepto?: string;
   tipo: 'Gasto Fijo' | 'Gasto Estimado' | 'Inversion Fija' | 'Inversion estimada' | 'Ahorro';
   clasificacion: 'Vivienda' | 'Alimentacion' | 'Ocio' | 'Trabajo' | 'Vehiculos' | 'Inversion' | 'Regalos' | 'Ahorro' | 'Ropa';
@@ -145,4 +166,5 @@ export interface AppState {
   activeView: ActiveView;
   yearStates: Record<number, YearState>;
   settings?: AppSettings;
+  patrimonio?: PatrimonioState;
 }
