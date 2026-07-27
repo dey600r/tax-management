@@ -10,7 +10,9 @@ import {
   Wallet,
   HelpCircle,
   Sparkles,
-  Info
+  Info,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import {
   PatrimonioState,
@@ -20,6 +22,7 @@ import {
   PatrimonioTipoActivo,
   YearState
 } from '../types';
+import { computeYear } from '../utils/calculations';
 
 interface PatrimonioViewProps {
   patrimonioState: PatrimonioState;
@@ -82,7 +85,6 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
   const items = patrimonioState.items ?? [];
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState<string>('ALL');
 
   // Calculate average annual increment (media de las aportaciones anuales) for a account matching cuentaDestino
   const getIncrementoAnual = (cuentaName: string): number => {
@@ -161,7 +163,7 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
     };
     onUpdatePatrimonio({
       ...patrimonioState,
-      items: [newItem, ...items],
+      items: [...items, newItem],
     });
     showToast('Fila añadida a patrimonio', 'success');
   };
@@ -226,19 +228,92 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
     return acc + calc.anual;
   }, 0);
 
-  const totalInteresCompuesto = items.reduce((acc, it) => {
-    const calc = getCalculatedValues(it.ahorro, it.interesEst, tiempo);
-    return acc + calc.interesCompuesto;
+  const totalIncrementoAnual = items.reduce((acc, it) => {
+    return acc + getIncrementoAnual(it.cuenta);
   }, 0);
+
+  const totalCrecimientoAnual = totalAnualRendimiento + totalIncrementoAnual;
+
+  const baseCalculo = totalActivos > 0 ? totalActivos : (patrimonioNeto > 0 ? patrimonioNeto : 0);
+  const rentabilidadPct = baseCalculo > 0 ? (totalAnualRendimiento / baseCalculo) * 100 : 0;
+  const incrementoPct = baseCalculo > 0 ? (totalIncrementoAnual / baseCalculo) * 100 : 0;
+
+  const formatPercent = (pct: number) => {
+    return pct.toLocaleString('es-ES', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Calculation for Meses de Solvencia
+  const totalLiquidezRapida = items
+    .filter((it) => {
+      const normTipoActivo = (it.tipoActivo || '').toLowerCase().trim();
+      return normTipoActivo === 'liquidez rapida' || normTipoActivo === 'liquidez rápida';
+    })
+    .reduce((acc, it) => acc + (isNaN(it.ahorro) ? 0 : Number(it.ahorro)), 0);
+
+  let gastoAnualTotal = 0;
+  let capacidadReaccionAnual = 0;
+
+  if (yearStates && Object.keys(yearStates).length > 0) {
+    const sortedYears = Object.keys(yearStates).map(Number).sort((a, b) => b - a);
+    const latestYearState = yearStates[sortedYears[0]];
+
+    if (latestYearState && latestYearState.expenses) {
+      Object.values(latestYearState.expenses).forEach((monthExpenses) => {
+        if (Array.isArray(monthExpenses)) {
+          monthExpenses.forEach((exp) => {
+            const normTipo = (exp.tipo || '').toLowerCase().trim();
+            if (normTipo === 'gasto fijo' || normTipo === 'gasto estimado') {
+              const imp = isNaN(exp.importe) ? 0 : Number(exp.importe);
+              gastoAnualTotal += imp;
+
+              const capPct = (exp.capReaccion !== null && exp.capReaccion !== undefined && !isNaN(exp.capReaccion))
+                ? Number(exp.capReaccion)
+                : 0;
+              capacidadReaccionAnual += (imp * capPct) / 100;
+            }
+          });
+        }
+      });
+    }
+  }
+
+  const gastoMensual = gastoAnualTotal > 0 ? gastoAnualTotal / 12 : 0;
+  const mesesSolvencia = gastoMensual > 0 ? totalLiquidezRapida / gastoMensual : 0;
+
+  const gastoAnualCapReaccion = Math.max(0, gastoAnualTotal - capacidadReaccionAnual);
+  const gastoMensualCapReaccion = gastoAnualCapReaccion > 0 ? gastoAnualCapReaccion / 12 : 0;
+  const mesesSolvenciaCapReaccion = gastoMensualCapReaccion > 0 ? totalLiquidezRapida / gastoMensualCapReaccion : 0;
+
+  let salarioBrutoUltimoAno = 0;
+  if (yearStates && Object.keys(yearStates).length > 0) {
+    const sortedYears = Object.keys(yearStates).map(Number).sort((a, b) => b - a);
+    const latestYearState = yearStates[sortedYears[0]];
+    if (latestYearState) {
+      const computedYear = computeYear(latestYearState);
+      salarioBrutoUltimoAno = computedYear.annualSummary.salarioBruto || 0;
+    }
+  }
+
+  const patrimonioObjetivoIngresos = (salarioBrutoUltimoAno * 36) / 10;
+  const esPatrimonioMayorOIgual = patrimonioNeto >= patrimonioObjetivoIngresos;
+
+  const formatMonths = (val: number) => {
+    return val.toLocaleString('es-ES', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  };
 
   // Filtering
   const filteredItems = items.filter((it) => {
-    const matchSearch =
+    return (
       it.cuenta.toLowerCase().includes(searchTerm.toLowerCase()) ||
       it.tipoCuenta.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      it.tipoActivo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchTipo = filterTipo === 'ALL' || it.tipo === filterTipo;
-    return matchSearch && matchTipo;
+      it.tipoActivo.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   const formatCurrency = (amount: number) => {
@@ -266,8 +341,8 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {items.length === 0 ? (
+        {items.length === 0 && (
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               id="btn-patrimonio-load-demo"
@@ -277,27 +352,8 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
               <Sparkles className="w-4 h-4 text-amber-500" />
               Cargar Ejemplo
             </button>
-          ) : (
-            <button
-              type="button"
-              id="btn-patrimonio-clear-all"
-              onClick={handleClearAll}
-              className="px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-            >
-              Vaciar Tabla
-            </button>
-          )}
-
-          <button
-            type="button"
-            id="btn-patrimonio-add-top"
-            onClick={handleAddItem}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Añadir Elemento
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards Summary */}
@@ -311,31 +367,42 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           <div className={`text-lg font-mono font-black ${patrimonioNeto >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
             {formatCurrency(patrimonioNeto)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Activos menos Pasivos</div>
+          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>Obj. según ingresos: {formatCurrency(patrimonioObjetivoIngresos)}</span>
+            {esPatrimonioMayorOIgual ? (
+              <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            ) : (
+              <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            )}
+          </div>
         </div>
 
-        {/* Total Rendimiento Anual */}
+        {/* Total Crecimiento Anual */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xxs font-bold uppercase tracking-wider text-indigo-600">Rentabilidad Anual</span>
-            <TrendingUp className="w-4 h-4 text-indigo-500" />
+            <span className="text-xxs font-bold uppercase tracking-wider text-emerald-600">Crecimiento Anual</span>
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-lg font-mono font-black text-indigo-600">
-            {formatCurrency(totalAnualRendimiento)}
+          <div className="text-lg font-mono font-black text-emerald-600">
+            {formatCurrency(totalCrecimientoAnual)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Estimación Simple Anual</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">
+            Rentabilidad {formatPercent(rentabilidadPct)}% + Incremento Anual {formatPercent(incrementoPct)}%
+          </div>
         </div>
 
-        {/* Total Interés Compuesto */}
+        {/* Meses de Solvencia */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xxs font-bold uppercase tracking-wider text-purple-600">Interés Compuesto</span>
-            <Percent className="w-4 h-4 text-purple-500" />
+            <span className="text-xxs font-bold uppercase tracking-wider text-sky-600">Meses de Solvencia</span>
+            <Clock className="w-4 h-4 text-sky-500" />
           </div>
-          <div className="text-lg font-mono font-black text-purple-600">
-            {formatCurrency(totalInteresCompuesto)}
+          <div className="text-lg font-mono font-black text-sky-600">
+            {formatMonths(mesesSolvencia)} meses
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Generado en {tiempo} años</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">
+            Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccion)} meses
+          </div>
         </div>
       </div>
 
@@ -388,18 +455,6 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Filter by Tipo */}
-            <select
-              id="select-filter-tipo"
-              value={filterTipo}
-              onChange={(e) => setFilterTipo(e.target.value)}
-              className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">Todos los tipos</option>
-              <option value="Activos">Solo Activos</option>
-              <option value="Pasivos">Solo Pasivos</option>
-            </select>
-
             {/* Search Input */}
             <input
               id="input-search-patrimonio"
@@ -409,6 +464,16 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 sm:w-56"
             />
+
+            <button
+              type="button"
+              id="btn-patrimonio-add-top"
+              onClick={handleAddItem}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Añadir Elemento
+            </button>
           </div>
         </div>
 
@@ -485,12 +550,12 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
                       <div className="space-y-1">
                         <h4 className="font-bold text-slate-700 text-sm">No hay registros patrimoniales</h4>
                         <p className="text-slate-400 text-xs">
-                          {searchTerm || filterTipo !== 'ALL'
-                            ? 'No se encontraron resultados con los filtros aplicados.'
+                          {searchTerm
+                            ? 'No se encontraron resultados con la búsqueda aplicada.'
                             : 'Añade tu primera cuenta, fondo de inversión, bien o pasivo para iniciar los cálculos.'}
                         </p>
                       </div>
-                      {!searchTerm && filterTipo === 'ALL' && (
+                      {!searchTerm && (
                         <div className="pt-2 flex items-center justify-center gap-3">
                           <button
                             type="button"
