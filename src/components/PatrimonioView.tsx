@@ -300,12 +300,116 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
   const patrimonioObjetivoIngresos = (salarioBrutoUltimoAno * 36) / 10;
   const esPatrimonioMayorOIgual = patrimonioNeto >= patrimonioObjetivoIngresos;
 
+  // Calculation for Ratio de Endeudamiento
+  const totalDeuda = items
+    .filter((it) => (it.tipoActivo || '').toLowerCase().trim() === 'deuda')
+    .reduce((acc, it) => acc + (isNaN(it.ahorro) ? 0 : Number(it.ahorro)), 0);
+
+  const totalNoDeuda = items
+    .filter((it) => (it.tipoActivo || '').toLowerCase().trim() !== 'deuda')
+    .reduce((acc, it) => acc + (isNaN(it.ahorro) ? 0 : Number(it.ahorro)), 0);
+
+  const ratioEndeudamientoPct = totalNoDeuda > 0 ? (totalDeuda / totalNoDeuda) * 100 : 0;
+
   const formatMonths = (val: number) => {
     return val.toLocaleString('es-ES', {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
   };
+
+  // Calculation for Patrimonio Estimado from Table 2 (Registro y control de gastos)
+  interface EstimadoItemRow {
+    cuenta: string;
+    clasificacion: string;
+    ahorro: number;
+    interesPct: number;
+    anual: number;
+    incrementoAnual: number;
+    interesCompuesto: number;
+  }
+
+  const getEstimadoRows = (): EstimadoItemRow[] => {
+    if (!yearStates) return [];
+
+    const map = new Map<string, { cuenta: string; clasificacion: string; ahorro: number }>();
+
+    (Object.values(yearStates) as YearState[]).forEach((yrState) => {
+      if (!yrState?.expenses) return;
+      Object.values(yrState.expenses).forEach((monthExpenses) => {
+        if (Array.isArray(monthExpenses)) {
+          monthExpenses.forEach((row) => {
+            const rawCuenta = row.cuentaDestino ? row.cuentaDestino.trim() : '';
+            const normClasif = row.clasificacion ? row.clasificacion.trim().toLowerCase() : '';
+
+            if (rawCuenta && (normClasif === 'ahorro' || normClasif === 'inversion')) {
+              const normKey = rawCuenta.toLowerCase();
+              const imp = isNaN(row.importe) ? 0 : Number(row.importe);
+              const current = map.get(normKey);
+              if (current) {
+                current.ahorro += imp;
+              } else {
+                map.set(normKey, {
+                  cuenta: rawCuenta,
+                  clasificacion: row.clasificacion || (normClasif === 'ahorro' ? 'Ahorro' : 'Inversión'),
+                  ahorro: imp,
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+
+    const rows: EstimadoItemRow[] = [];
+    map.forEach((item) => {
+      const realItem = items.find(
+        (it) => it.cuenta.trim().toLowerCase() === item.cuenta.trim().toLowerCase()
+      );
+      const interesPct = realItem && !isNaN(realItem.interesEst) ? Number(realItem.interesEst) : 0;
+
+      const r = interesPct / 100;
+      const anual = item.ahorro * r;
+      const incrementoAnual = getIncrementoAnual(item.cuenta);
+
+      let interesCompuesto = 0;
+      const safeTiempo = isNaN(tiempo) || tiempo < 0 ? 0 : tiempo;
+      if (safeTiempo > 0 && item.ahorro !== 0 && interesPct !== 0) {
+        interesCompuesto = item.ahorro * Math.pow(1 + r, safeTiempo) - item.ahorro;
+      }
+
+      rows.push({
+        cuenta: item.cuenta,
+        clasificacion: item.clasificacion,
+        ahorro: item.ahorro,
+        interesPct,
+        anual: isNaN(anual) ? 0 : anual,
+        incrementoAnual: isNaN(incrementoAnual) ? 0 : incrementoAnual,
+        interesCompuesto: isNaN(interesCompuesto) ? 0 : interesCompuesto,
+      });
+    });
+
+    return rows;
+  };
+
+  const estimadoRows = getEstimadoRows();
+  const totalPatrimonioEstimado = estimadoRows.reduce((acc, row) => acc + row.ahorro, 0);
+  const esPatrimonioMayorOIgualEstimado = totalPatrimonioEstimado >= patrimonioObjetivoIngresos;
+
+  const totalLiquidezEstimada = estimadoRows.reduce((acc, row) => {
+    const matchingReal = items.find((it) => it.cuenta.trim().toLowerCase() === row.cuenta.trim().toLowerCase());
+    if (matchingReal) {
+      const norm = (matchingReal.tipoActivo || '').toLowerCase().trim();
+      if (norm === 'liquidez rapida' || norm === 'liquidez rápida') {
+        return acc + row.ahorro;
+      }
+      return acc;
+    }
+    return acc + row.ahorro;
+  }, 0);
+
+  const mesesSolvenciaEstimado = gastoMensual > 0 ? totalLiquidezEstimada / gastoMensual : 0;
+  const mesesSolvenciaCapReaccionEstimado = gastoMensualCapReaccion > 0 ? totalLiquidezEstimada / gastoMensualCapReaccion : 0;
 
   // Filtering
   const filteredItems = items.filter((it) => {
@@ -334,7 +438,7 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
             <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
               <Landmark className="w-5 h-5" />
             </div>
-            Patrimonio
+            Patrimonio Real
           </h2>
           <p className="text-xs text-slate-500 font-medium mt-1">
             Gestión y estimación de activos, cuentas bancarias, pasivos e interés compuesto.
@@ -357,7 +461,7 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
       </div>
 
       {/* KPI Cards Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" id="patrimonio-kpis-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="patrimonio-kpis-grid">
         {/* Patrimonio Neto */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
@@ -386,8 +490,15 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           <div className="text-lg font-mono font-black text-emerald-600">
             {formatCurrency(totalCrecimientoAnual)}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            Rentabilidad {formatPercent(rentabilidadPct)}% + Incremento Anual {formatPercent(incrementoPct)}%
+          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>
+              Rentabilidad {formatPercent(rentabilidadPct)}% + Incremento Anual {formatPercent(incrementoPct)}%
+            </span>
+            {rentabilidadPct >= inflacion ? (
+              <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            ) : (
+              <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            )}
           </div>
         </div>
 
@@ -400,8 +511,34 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           <div className="text-lg font-mono font-black text-sky-600">
             {formatMonths(mesesSolvencia)} meses
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">
-            Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccion)} meses
+          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>
+              Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccion)} meses
+            </span>
+            {mesesSolvencia >= 9 ? (
+              <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            ) : (
+              <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            )}
+          </div>
+        </div>
+
+        {/* Ratio de Endeudamiento */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-xxs font-bold uppercase tracking-wider text-amber-600">Ratio de Endeudamiento</span>
+            <ShieldAlert className="w-4 h-4 text-amber-500" />
+          </div>
+          <div className="text-lg font-mono font-black text-amber-600">
+            {formatPercent(ratioEndeudamientoPct)}%
+          </div>
+          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>Valor de la deuda: {formatCurrency(totalDeuda)}</span>
+            {ratioEndeudamientoPct > 50 ? (
+              <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            ) : (
+              <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            )}
           </div>
         </div>
       </div>
@@ -754,6 +891,152 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
         </div>
       </div>
 
+      {/* SECTION: Patrimonio Estimado */}
+      <div className="space-y-4 pt-6 border-t-2 border-slate-200/80" id="patrimonio-estimado-section">
+        {/* Title Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              Patrimonio Estimado
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              Estimación calculada automáticamente agrupando los registros de ahorro e inversión del control de gastos.
+            </p>
+          </div>
+        </div>
+
+        {/* Cards for Patrimonio Estimado: PATRIMONIO NETO y MESES DE SOLVENCIA */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="patrimonio-estimado-kpis-grid">
+          {/* Card 1: Patrimonio Neto (Estimado) */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xxs font-bold uppercase tracking-wider text-indigo-600">Patrimonio Neto (Estimado)</span>
+              <Wallet className="w-4 h-4 text-indigo-600" />
+            </div>
+            <div className="text-lg font-mono font-black text-slate-900">
+              {formatCurrency(totalPatrimonioEstimado)}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span>Obj. según ingresos: {formatCurrency(patrimonioObjetivoIngresos)}</span>
+              {esPatrimonioMayorOIgualEstimado ? (
+                <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              )}
+            </div>
+          </div>
+
+          {/* Card 2: Meses de Solvencia (Estimado) */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-xxs font-bold uppercase tracking-wider text-sky-600">Meses de Solvencia (Estimado)</span>
+              <Clock className="w-4 h-4 text-sky-500" />
+            </div>
+            <div className="text-lg font-mono font-black text-sky-600">
+              {formatMonths(mesesSolvenciaEstimado)} meses
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+              <span>
+                Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccionEstimado)} meses
+              </span>
+              {mesesSolvenciaEstimado >= 9 ? (
+                <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              ) : (
+                <ThumbsDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Table for Patrimonio Estimado */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="patrimonio-estimado-table-card">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span className="font-sans font-bold text-xs uppercase tracking-wider text-slate-700">
+              Detalle de Cuentas de Ahorro e Inversión Estimadas ({estimadoRows.length})
+            </span>
+          </div>
+
+          <div className="overflow-x-auto" id="patrimonio-estimado-table-wrapper">
+            <table className="w-full text-left border-collapse min-w-[900px]" id="patrimonio-estimado-table">
+              <thead>
+                <tr className="bg-slate-100/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  <th className="py-3 px-3.5 w-[25%]">CUENTA</th>
+                  <th className="py-3 px-3 w-[15%]">CLASIFICACIÓN</th>
+                  <th className="py-3 px-3 text-right w-[15%]">AHORRO (€)</th>
+                  <th className="py-3 px-3 text-right w-[15%]">ANUAL (€)</th>
+                  <th className="py-3 px-3 text-right w-[15%]">INCREMENTO ANUAL (€)</th>
+                  <th className="py-3 px-3 text-right w-[15%]">INTERÉS COMPUESTO (€)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-sans">
+                {estimadoRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 px-4 text-center text-slate-400">
+                      No hay registros con clasificación &quot;Ahorro&quot; o &quot;Inversión&quot; en la tabla de control de gastos.
+                    </td>
+                  </tr>
+                ) : (
+                  estimadoRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-3.5 font-semibold text-slate-800">{row.cuenta}</td>
+                      <td className="py-2.5 px-3">
+                        <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded-md ${
+                          row.clasificacion.toLowerCase() === 'ahorro'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }`}>
+                          {row.clasificacion}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                        {formatCurrency(row.ahorro)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-indigo-600 bg-indigo-50/30">
+                        {formatCurrency(row.anual)}
+                        {row.interesPct > 0 && (
+                          <span className="block text-[10px] text-slate-400 font-normal">
+                            ({formatPercent(row.interesPct)}%)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-600 bg-emerald-50/20">
+                        {formatCurrency(row.incrementoAnual)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-purple-700 bg-purple-50/30">
+                        {formatCurrency(row.interesCompuesto)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {estimadoRows.length > 0 && (
+                <tfoot>
+                  <tr className="bg-slate-100/90 border-t-2 border-slate-200 font-bold text-slate-800 text-xs">
+                    <td colSpan={2} className="py-3 px-3.5 uppercase tracking-wider text-slate-600">
+                      Totales ({estimadoRows.length} cuentas)
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-sm text-slate-900">
+                      {formatCurrency(estimadoRows.reduce((a, b) => a + b.ahorro, 0))}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-sm text-indigo-700">
+                      {formatCurrency(estimadoRows.reduce((a, b) => a + b.anual, 0))}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-sm text-emerald-700">
+                      {formatCurrency(estimadoRows.reduce((a, b) => a + b.incrementoAnual, 0))}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono text-sm text-purple-700">
+                      {formatCurrency(estimadoRows.reduce((a, b) => a + b.interesCompuesto, 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

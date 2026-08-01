@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, LayoutDashboard, Calculator, PiggyBank } from 'lucide-react';
 import { AppState, ActiveView, MonthId, EmployeeData, YearState, MonthState, InvestmentRow, TransferRow, ExpenseRow, AppSettings } from './types';
 import { Header } from './components/Header';
 import { Sidenav } from './components/Sidenav';
@@ -698,9 +698,17 @@ export default function App() {
           
           /* Dashboard evolution chart and cards */
           <div className="space-y-6">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
-              Dashboard de Históricos
-            </h2>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <LayoutDashboard className="w-5 h-5" />
+                </div>
+                Dashboard de Históricos
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Visualización global y comparativa interanual de ingresos, impuestos, ahorro e inversión.
+              </p>
+            </div>
             <DashboardView summaries={dashboardSummaries} />
           </div>
           
@@ -710,8 +718,11 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                      <PiggyBank className="w-5 h-5" />
+                    </div>
                     Gestión de Ahorros y Gastos
                   </h2>
                   <button
@@ -723,7 +734,7 @@ export default function App() {
                     <Settings className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="text-xs text-slate-400 font-medium">
+                <p className="text-xs text-slate-500 font-medium mt-1">
                   Controla tus transferencias automáticas mensuales a otras entidades bancarias y planifica tu ahorro y gasto sin superar tu nómina neta.
                 </p>
               </div>
@@ -768,10 +779,13 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                    <Calculator className="w-5 h-5" />
+                  </div>
                   Cuenta Anual de Nóminas
                 </h2>
-                <p className="text-xs text-slate-400 font-medium">
+                <p className="text-xs text-slate-500 font-medium mt-1">
                   Introduce los valores de tus nóminas mensuales y calcula las exenciones e IRPF anual de forma offline.
                 </p>
               </div>
