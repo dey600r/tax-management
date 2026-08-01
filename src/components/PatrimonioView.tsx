@@ -513,7 +513,7 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
           </div>
           <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
             <span>
-              Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccion)} meses
+              {formatMonths(mesesSolvenciaCapReaccion)} meses con la capacidad de reacción
             </span>
             {mesesSolvencia >= 9 ? (
               <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -940,7 +940,7 @@ export const PatrimonioView: React.FC<PatrimonioViewProps> = ({
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span>
-                Hay un margen aplicando la capacidad de reacción que ampliaría a {formatMonths(mesesSolvenciaCapReaccionEstimado)} meses
+                {formatMonths(mesesSolvenciaCapReaccionEstimado)} meses con la capacidad de reacción
               </span>
               {mesesSolvenciaEstimado >= 9 ? (
                 <ThumbsUp className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
